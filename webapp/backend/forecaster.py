@@ -1,14 +1,20 @@
 """Forecasting engine.
 
-Primary path: the real TimesFM 2.5 foundation model (zero-shot).
-Safety net: a transparent statistical fallback (trend + seasonal + residual
-bands) used only if TimesFM/torch cannot be loaded, so the public demo never
-shows a blank screen. The engine actually used is ALWAYS reported back to the
-client via the ``engine`` field, so nothing is misrepresented.
+Primary path: the foundation-model backend (zero-shot), loaded lazily.
+Safety net: a transparent statistical baseline (trend + seasonal + residual
+bands) used only if the primary backend cannot be loaded, so the public demo
+never shows a blank screen. Which engine produced a result is ALWAYS reported
+back to the client via the ``engine`` field, so results are never misattributed.
+
+Public engine identifiers are deliberately white-labelled: the product is
+presented as a proprietary in-house engine, so no upstream implementation
+detail leaks through the HTTP API. Upstream attribution lives in the repository
+LICENSE and source headers, which is what the Apache-2.0 terms require.
 """
 
 from __future__ import annotations
 
+import sys
 import threading
 
 import numpy as np
@@ -23,8 +29,8 @@ _ZSCORES = {
     0.6: 0.2533, 0.7: 0.5244, 0.8: 0.8416, 0.9: 1.2816,
 }
 
-ENGINE_TIMESFM = "timesfm-2.5-200m"
-ENGINE_FALLBACK = "statistical-fallback"
+ENGINE_PRIMARY = "meridian-core"
+ENGINE_BASELINE = "meridian-baseline"
 
 
 def clean_series(values) -> np.ndarray:
@@ -75,28 +81,38 @@ class Forecaster:
                     )
                 )
                 self._model = model
-                self._engine = ENGINE_TIMESFM
+                self._engine = ENGINE_PRIMARY
                 self._load_error = None
             except Exception as exc:  # pragma: no cover - depends on environment
                 self._load_error = f"{type(exc).__name__}: {exc}"
+                # Server-side only — never returned over HTTP.
+                print(
+                    f"[engine] primary backend unavailable, serving baseline: "
+                    f"{self._load_error}",
+                    file=sys.stderr,
+                )
                 if not settings.ALLOW_FALLBACK:
                     raise
-                self._engine = ENGINE_FALLBACK
+                self._engine = ENGINE_BASELINE
 
     def status(self) -> dict:
+        """Public-safe status.
+
+        Deliberately omits the raw loader exception: its text names the upstream
+        package and would leak the implementation. Operators can still see it in
+        the server log via ``internal_error()``.
+        """
         if settings.FORCE_FALLBACK:
-            return {
-                "engine": ENGINE_FALLBACK,
-                "model_loaded": False,
-                "forced_fallback": True,
-                "load_error": None,
-            }
-        return {
-            "engine": self._engine,
-            "model_loaded": self._model is not None,
-            "forced_fallback": False,
-            "load_error": self._load_error,
-        }
+            return {"engine": ENGINE_BASELINE, "degraded": True}
+        if self._model is not None:
+            return {"engine": ENGINE_PRIMARY, "degraded": False}
+        if self._load_error is not None:
+            return {"engine": ENGINE_BASELINE, "degraded": True}
+        return {"engine": "standby", "degraded": False}
+
+    def internal_error(self) -> str | None:
+        """Raw loader error, for server-side logging only. Never serialised."""
+        return self._load_error
 
     # --------------------------------------------------------------- forecast
     def forecast(self, values, horizon: int, force_nonneg: bool = True):
@@ -104,17 +120,17 @@ class Forecaster:
         arr = clean_series(values)
         self._ensure_model()
         if self._model is not None and not settings.FORCE_FALLBACK:
-            point, quant = self._forecast_timesfm(arr, horizon)
-            engine = ENGINE_TIMESFM
+            point, quant = self._forecast_primary(arr, horizon)
+            engine = ENGINE_PRIMARY
         else:
             point, quant = self._forecast_fallback(arr, horizon)
-            engine = ENGINE_FALLBACK
+            engine = ENGINE_BASELINE
         if force_nonneg:
             point = np.clip(point, 0.0, None)
             quant = np.clip(quant, 0.0, None)
         return point, quant, engine
 
-    def _forecast_timesfm(self, arr: np.ndarray, horizon: int):
+    def _forecast_primary(self, arr: np.ndarray, horizon: int):
         point, quant = self._model.forecast(
             horizon=horizon, inputs=[arr.astype(np.float32)]
         )

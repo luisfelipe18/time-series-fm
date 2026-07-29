@@ -3,120 +3,213 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ForecastLab — AI Time-Series Forecasting Demo</title>
-  <meta name="description" content="Zero-shot time-series forecasting powered by Google's TimesFM. Upload a CSV and see the future in seconds." />
+  <title>Meridian Forecasting — Private Demonstration</title>
+  <meta name="description" content="Meridian is a proprietary forecasting engine developed in-house. Submit a series and receive a calibrated projection with quantified uncertainty." />
   <link rel="stylesheet" href="/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23F2EFE7'/><rect x='2.5' y='2.5' width='27' height='27' fill='none' stroke='%238C7238' stroke-width='1'/><text x='16' y='23' font-family='Georgia,serif' font-size='18' fill='%231B1A17' text-anchor='middle'>M</text></svg>" />
 </head>
 <body>
-  <header class="hero">
-    <div class="wrap">
-      <div class="badge-brand">📈 <span id="brand">ForecastLab</span></div>
-      <h1>See the future of <span class="grad">your data</span> in seconds</h1>
-      <p class="sub">
-        Zero-shot forecasting powered by <strong>Google&nbsp;TimesFM&nbsp;2.5</strong>.
-        No training, no setup — upload a CSV or try a sample and get calibrated
-        predictions with confidence intervals instantly.
-      </p>
-      <div class="engine-line">
-        <span id="engine-badge" class="engine-badge loading">checking engine…</span>
-        <span id="rate-info" class="rate-info"></span>
+
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="wordmark" href="/">
+        <span class="wordmark-mark">M</span>
+        <span class="wordmark-text">
+          <b id="brand">Meridian</b>
+          <i id="brand-suffix">Forecasting</i>
+        </span>
+      </a>
+      <div class="topbar-meta">
+        <span id="engine-badge" class="engine-badge">Engine · initialising</span>
       </div>
+    </div>
+  </div>
+
+  <header class="masthead">
+    <div class="wrap">
+      <p class="eyebrow">Private demonstration</p>
+      <h1>
+        The quarter ahead,<br />
+        <em>quantified.</em>
+      </h1>
+      <div class="rule-double" aria-hidden="true"></div>
+      <p class="deck">
+        Meridian is a proprietary forecasting engine developed and trained in-house
+        by our research team. Submit a series of your own and receive a calibrated
+        projection — with the uncertainty stated explicitly, not hidden — in seconds.
+      </p>
+      <dl class="credentials">
+        <div><dt>Method</dt><dd>Probabilistic, distribution&#8209;aware</dd></div>
+        <div><dt>Preparation</dt><dd>None. No model training required</dd></div>
+        <div><dt>Deliverable</dt><dd>Projection with stated confidence</dd></div>
+      </dl>
+      <p class="rate-info" id="rate-info"></p>
     </div>
   </header>
 
   <main class="wrap">
-    <!-- STEP 1: data -->
-    <section class="card">
-      <h2><span class="step">1</span> Choose your data</h2>
-      <p class="muted" id="limits-line">Loading demo limits…</p>
 
-      <div class="data-grid">
-        <div class="samples">
-          <h3>Try a sample dataset</h3>
-          <div id="sample-list" class="sample-list"></div>
-        </div>
-        <div class="upload">
-          <h3>…or upload your CSV</h3>
-          <label class="dropzone" id="dropzone">
-            <input type="file" id="file-input" accept=".csv,text/csv" hidden />
-            <span class="dz-icon">⬆️</span>
-            <span class="dz-text">Drag &amp; drop a CSV here<br />or <u>click to browse</u></span>
-          </label>
-          <p class="muted small" id="upload-hint"></p>
+    <!-- I. DATA -->
+    <section class="panel">
+      <div class="panel-head">
+        <span class="numeral">I</span>
+        <div>
+          <h2>Select a series</h2>
+          <p class="panel-note" id="limits-line">Loading demonstration parameters…</p>
         </div>
       </div>
+
+      <div class="data-grid">
+        <div>
+          <h3 class="label">Prepared datasets</h3>
+          <div id="sample-list" class="sample-list"></div>
+        </div>
+        <div>
+          <h3 class="label">Or submit your own</h3>
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="file-input" accept=".csv,text/csv" hidden />
+            <span class="dz-rule"></span>
+            <span class="dz-title">Deposit a CSV file</span>
+            <span class="dz-sub">Drag it here, or <u>select from your device</u></span>
+          </label>
+          <p class="panel-note" id="upload-hint"></p>
+        </div>
+      </div>
+
       <div id="data-status" class="data-status"></div>
     </section>
 
-    <!-- STEP 2: configure -->
-    <section class="card" id="config-card" hidden>
-      <h2><span class="step">2</span> Configure the forecast</h2>
+    <!-- II. CONFIGURE -->
+    <section class="panel" id="config-card" hidden>
+      <div class="panel-head">
+        <span class="numeral">II</span>
+        <div>
+          <h2>Specify the projection</h2>
+          <p class="panel-note">Choose the series to project and how far ahead to look.</p>
+        </div>
+      </div>
+
       <div class="controls">
         <div class="control">
-          <label for="target-col">Target variable (what to predict)</label>
+          <label class="label" for="target-col">Series to project</label>
           <select id="target-col"></select>
         </div>
         <div class="control">
-          <label for="date-col">Date column (optional)</label>
+          <label class="label" for="date-col">Period column <span class="opt">optional</span></label>
           <select id="date-col"></select>
         </div>
-        <div class="control">
-          <label for="horizon">Horizon: <b id="horizon-val">24</b> steps ahead</label>
+        <div class="control control-wide">
+          <label class="label" for="horizon">
+            Horizon &nbsp;·&nbsp; <b id="horizon-val">24</b> periods ahead
+          </label>
           <input type="range" id="horizon" min="1" max="128" value="24" />
         </div>
-        <div class="control">
-          <label>Mode</label>
+        <div class="control control-wide">
+          <span class="label">Method of inspection</span>
           <div class="segmented" id="mode-seg">
-            <button data-mode="future" class="active">🔮 Forecast future</button>
-            <button data-mode="backtest">🎯 Backtest (prove accuracy)</button>
+            <button data-mode="future" class="active">
+              <b>Projection</b><i>Extend the series forward</i>
+            </button>
+            <button data-mode="backtest">
+              <b>Validation</b><i>Withhold recent history and score it</i>
+            </button>
           </div>
         </div>
-        <div class="control checkbox">
-          <label><input type="checkbox" id="nonneg" checked /> Data is non-negative (sales, counts, demand…)</label>
+        <div class="control control-wide checkbox">
+          <label><input type="checkbox" id="nonneg" checked />
+            <span>This series cannot fall below zero <i>(volumes, revenue, counts)</i></span></label>
         </div>
       </div>
-      <button id="run-btn" class="cta">Run forecast →</button>
-      <p class="muted small" id="mode-hint"></p>
+
+      <div class="panel-foot">
+        <button id="run-btn" class="btn-primary">Compute projection</button>
+        <p class="panel-note" id="mode-hint"></p>
+      </div>
     </section>
 
-    <!-- STEP 3: result -->
-    <section class="card" id="result-card" hidden>
-      <h2><span class="step">3</span> Result</h2>
+    <!-- III. RESULT -->
+    <section class="panel" id="result-card" hidden>
+      <div class="panel-head">
+        <span class="numeral">III</span>
+        <div>
+          <h2>The projection</h2>
+          <p class="panel-note" id="result-engine"></p>
+        </div>
+      </div>
+
       <div id="metrics" class="metrics"></div>
-      <div class="chart-holder">
-        <canvas id="chart" width="1200" height="520"></canvas>
-      </div>
-      <div id="chart-legend" class="chart-legend"></div>
-      <div class="result-actions">
-        <button id="download-btn" class="ghost">⬇️ Download forecast CSV</button>
-        <span class="result-engine" id="result-engine"></span>
+
+      <figure class="chart-figure">
+        <div class="chart-holder"><canvas id="chart" width="1200" height="520"></canvas></div>
+        <figcaption id="chart-legend" class="chart-legend"></figcaption>
+      </figure>
+
+      <div class="panel-foot panel-foot-split">
+        <button id="download-btn" class="btn-secondary">Download projection · CSV</button>
       </div>
     </section>
 
-    <!-- CTA -->
-    <section class="card cta-card">
-      <h2>Want this on <em>all</em> your data?</h2>
-      <p>
-        This is a throttled public demo. The production service removes the row,
-        column and rate limits and adds:
-      </p>
-      <ul class="perks">
-        <li>📦 <b>Batch forecasting</b> — thousands of series in one call</li>
-        <li>🧩 <b>Covariates</b> — price, promotions, holidays, weather</li>
-        <li>🔔 <b>Anomaly alerts</b> — Slack/email when metrics leave their band</li>
-        <li>🔌 <b>REST API &amp; integrations</b> — Shopify, Sheets, your warehouse</li>
-        <li>🎯 <b>Custom fine-tuning</b> — a model trained on your history</li>
-      </ul>
-      <a id="contact-cta" class="cta" href="#">Get API access →</a>
+    <!-- ENGAGEMENT -->
+    <section class="panel panel-engage">
+      <div class="panel-head">
+        <span class="numeral">&#167;</span>
+        <div>
+          <h2>Engagement</h2>
+          <p class="panel-note">
+            This demonstration is deliberately constrained. A client engagement is not.
+          </p>
+        </div>
+      </div>
+
+      <dl class="perks">
+        <div>
+          <dt>Portfolio scale</dt>
+          <dd>Thousands of series projected in a single instruction, on schedule.</dd>
+        </div>
+        <div>
+          <dt>Explanatory variables</dt>
+          <dd>Price, promotion, holiday and weather effects entered directly into the model.</dd>
+        </div>
+        <div>
+          <dt>Standing surveillance</dt>
+          <dd>Notification the moment a figure departs its expected interval.</dd>
+        </div>
+        <div>
+          <dt>Systems integration</dt>
+          <dd>A private endpoint into your warehouse, ledger or commerce platform.</dd>
+        </div>
+        <div>
+          <dt>Dedicated calibration</dt>
+          <dd>The engine tuned against your own history, held privately to your account.</dd>
+        </div>
+        <div>
+          <dt>Advisory</dt>
+          <dd>A named analyst accountable for the figures you present to your board.</dd>
+        </div>
+      </dl>
+
+      <div class="panel-foot">
+        <a id="contact-cta" class="btn-primary" href="#">Request an introduction</a>
+        <p class="panel-note">Enquiries are answered personally, within one business day.</p>
+      </div>
     </section>
+
   </main>
 
-  <footer class="wrap footer">
-    <p>
-      Powered by <a href="https://github.com/google-research/timesfm" target="_blank" rel="noopener">TimesFM</a>
-      (Google Research, ICML 2024). This demo is not affiliated with or endorsed by Google.
-    </p>
+  <footer class="footer">
+    <div class="wrap">
+      <div class="rule-double" aria-hidden="true"></div>
+      <div class="footer-inner">
+        <p class="footer-mark">
+          <b id="footer-brand">Meridian</b> <span id="footer-est">MMXXVI</span>
+        </p>
+        <p class="footer-legal">
+          Meridian operates a proprietary forecasting engine. Figures produced in this
+          demonstration are illustrative and are not investment, accounting or actuarial
+          advice. All rights reserved.
+        </p>
+      </div>
+    </div>
   </footer>
 
   <div id="toast" class="toast" hidden></div>

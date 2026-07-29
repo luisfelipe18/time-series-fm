@@ -1,4 +1,4 @@
-"""FastAPI backend for the public TimesFM forecasting demo.
+"""FastAPI backend for the Meridian forecasting demo.
 
 Endpoints
     GET  /api/health          liveness + which engine is active
@@ -32,7 +32,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 SAMPLES_DIR = FRONTEND_DIR / "samples"
 
-app = FastAPI(title="TimesFM Forecast Demo", version="1.0.0")
+app = FastAPI(title="Meridian Forecasting API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

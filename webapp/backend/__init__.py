@@ -1,1 +1,1 @@
-"""TimesFM public forecasting demo — backend package."""
+"""Meridian forecasting demo — backend package."""

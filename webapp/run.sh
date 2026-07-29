@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# Launch the TimesFM forecasting demo (FastAPI backend + vanilla JS frontend).
+# Launch the Meridian forecasting demonstration (FastAPI + vanilla JS).
 #
 # Usage:
-#   ./run.sh                 # full model (downloads ~800 MB TimesFM weights once)
-#   LITE=1 ./run.sh          # fallback engine only — no torch, no model download
-#   PORT=9000 ./run.sh       # custom port
+#   ./run.sh                 full engine (installs the model backend; ~800 MB on first use)
+#   LITE=1 ./run.sh          baseline engine only — no torch, no model download
+#   PORT=9000 ./run.sh       custom port
 #
 set -euo pipefail
 cd "$(dirname "$0")"
 
 if ! command -v uv >/dev/null 2>&1; then
-  echo "❌ 'uv' is not installed."
-  echo "   Install it with:  curl -LsSf https://astral.sh/uv/install.sh | sh"
+  echo "Error: 'uv' is not installed."
+  echo "Install it with:  curl -LsSf https://astral.sh/uv/install.sh | sh"
   exit 1
 fi
 
@@ -20,17 +20,17 @@ HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8000}"
 
 if [[ "${LITE:-0}" == "1" ]]; then
-  echo "==> LITE mode: light deps only (statistical fallback engine, no torch)."
+  echo "--> LITE mode: light dependencies only (baseline engine, no torch)."
   uv sync
   export DEMO_FORCE_FALLBACK=1
 else
-  echo "==> Full mode: installing TimesFM + torch with uv (this can take a while)…"
+  echo "--> Full mode: installing the model backend with uv (this can take a while)."
   uv sync --extra full
-  echo "==> The TimesFM 2.5 weights (~800 MB) download on the first forecast request."
+  echo "--> Model weights are fetched on the first forecast request."
 fi
 
 echo ""
-echo "==> ForecastLab demo running at:  http://localhost:${PORT}"
+echo "--> Meridian demonstration available at:  http://localhost:${PORT}"
 echo "    Press Ctrl+C to stop."
 echo ""
 exec uv run uvicorn backend.main:app --host "$HOST" --port "$PORT"

@@ -40,8 +40,10 @@ class Settings:
     ALLOW_FALLBACK: bool = _bool("DEMO_ALLOW_FALLBACK", True)
 
     # ---- Branding / lead capture -----------------------------------------
-    CONTACT_EMAIL: str = os.getenv("DEMO_CONTACT_EMAIL", "sales@your-forecasting.co")
-    BRAND: str = os.getenv("DEMO_BRAND", "ForecastLab")
+    CONTACT_EMAIL: str = os.getenv("DEMO_CONTACT_EMAIL", "advisory@meridianforecasting.com")
+    BRAND: str = os.getenv("DEMO_BRAND", "Meridian")
+    BRAND_SUFFIX: str = os.getenv("DEMO_BRAND_SUFFIX", "Forecasting")
+    ESTABLISHED: str = os.getenv("DEMO_ESTABLISHED", "MMXXVI")
 
     def public_dict(self) -> dict:
         """Limits exposed to the frontend so it can enforce/display them."""
@@ -56,6 +58,8 @@ class Settings:
             "rate_limit_window_sec": self.RATE_LIMIT_WINDOW_SEC,
             "contact_email": self.CONTACT_EMAIL,
             "brand": self.BRAND,
+            "brand_suffix": self.BRAND_SUFFIX,
+            "established": self.ESTABLISHED,
         }
 
 
