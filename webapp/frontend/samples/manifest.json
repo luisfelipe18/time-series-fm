@@ -1,0 +1,38 @@
+[
+  {
+    "file": "retail_sales_weekly.csv",
+    "title": "Retail sales (weekly)",
+    "description": "3 years of weekly store sales with growth + yearly seasonality.",
+    "date_col": "week",
+    "target_col": "sales",
+    "suggested_horizon": 26,
+    "rows": 160
+  },
+  {
+    "file": "website_traffic_daily.csv",
+    "title": "Website traffic (daily)",
+    "description": "1 year of daily visits with a strong weekly cycle.",
+    "date_col": "date",
+    "target_col": "visits",
+    "suggested_horizon": 30,
+    "rows": 365
+  },
+  {
+    "file": "energy_load_hourly.csv",
+    "title": "Energy load (hourly)",
+    "description": "30 days of hourly electricity demand (daily + weekly cycles).",
+    "date_col": "timestamp",
+    "target_col": "load_mw",
+    "suggested_horizon": 48,
+    "rows": 720
+  },
+  {
+    "file": "temperature_monthly.csv",
+    "title": "Temperature (monthly, \u00b0C)",
+    "description": "10 years of monthly temperature \u2014 can be negative (uncheck 'non-negative').",
+    "date_col": "month",
+    "target_col": "temp_c",
+    "suggested_horizon": 24,
+    "rows": 120
+  }
+]

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ForecastLab — AI Time-Series Forecasting Demo</title>
+  <meta name="description" content="Zero-shot time-series forecasting powered by Google's TimesFM. Upload a CSV and see the future in seconds." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>" />
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="badge-brand">📈 <span id="brand">ForecastLab</span></div>
+      <h1>See the future of <span class="grad">your data</span> in seconds</h1>
+      <p class="sub">
+        Zero-shot forecasting powered by <strong>Google&nbsp;TimesFM&nbsp;2.5</strong>.
+        No training, no setup — upload a CSV or try a sample and get calibrated
+        predictions with confidence intervals instantly.
+      </p>
+      <div class="engine-line">
+        <span id="engine-badge" class="engine-badge loading">checking engine…</span>
+        <span id="rate-info" class="rate-info"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- STEP 1: data -->
+    <section class="card">
+      <h2><span class="step">1</span> Choose your data</h2>
+      <p class="muted" id="limits-line">Loading demo limits…</p>
+
+      <div class="data-grid">
+        <div class="samples">
+          <h3>Try a sample dataset</h3>
+          <div id="sample-list" class="sample-list"></div>
+        </div>
+        <div class="upload">
+          <h3>…or upload your CSV</h3>
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="file-input" accept=".csv,text/csv" hidden />
+            <span class="dz-icon">⬆️</span>
+            <span class="dz-text">Drag &amp; drop a CSV here<br />or <u>click to browse</u></span>
+          </label>
+          <p class="muted small" id="upload-hint"></p>
+        </div>
+      </div>
+      <div id="data-status" class="data-status"></div>
+    </section>
+
+    <!-- STEP 2: configure -->
+    <section class="card" id="config-card" hidden>
+      <h2><span class="step">2</span> Configure the forecast</h2>
+      <div class="controls">
+        <div class="control">
+          <label for="target-col">Target variable (what to predict)</label>
+          <select id="target-col"></select>
+        </div>
+        <div class="control">
+          <label for="date-col">Date column (optional)</label>
+          <select id="date-col"></select>
+        </div>
+        <div class="control">
+          <label for="horizon">Horizon: <b id="horizon-val">24</b> steps ahead</label>
+          <input type="range" id="horizon" min="1" max="128" value="24" />
+        </div>
+        <div class="control">
+          <label>Mode</label>
+          <div class="segmented" id="mode-seg">
+            <button data-mode="future" class="active">🔮 Forecast future</button>
+            <button data-mode="backtest">🎯 Backtest (prove accuracy)</button>
+          </div>
+        </div>
+        <div class="control checkbox">
+          <label><input type="checkbox" id="nonneg" checked /> Data is non-negative (sales, counts, demand…)</label>
+        </div>
+      </div>
+      <button id="run-btn" class="cta">Run forecast →</button>
+      <p class="muted small" id="mode-hint"></p>
+    </section>
+
+    <!-- STEP 3: result -->
+    <section class="card" id="result-card" hidden>
+      <h2><span class="step">3</span> Result</h2>
+      <div id="metrics" class="metrics"></div>
+      <div class="chart-holder">
+        <canvas id="chart" width="1200" height="520"></canvas>
+      </div>
+      <div id="chart-legend" class="chart-legend"></div>
+      <div class="result-actions">
+        <button id="download-btn" class="ghost">⬇️ Download forecast CSV</button>
+        <span class="result-engine" id="result-engine"></span>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="card cta-card">
+      <h2>Want this on <em>all</em> your data?</h2>
+      <p>
+        This is a throttled public demo. The production service removes the row,
+        column and rate limits and adds:
+      </p>
+      <ul class="perks">
+        <li>📦 <b>Batch forecasting</b> — thousands of series in one call</li>
+        <li>🧩 <b>Covariates</b> — price, promotions, holidays, weather</li>
+        <li>🔔 <b>Anomaly alerts</b> — Slack/email when metrics leave their band</li>
+        <li>🔌 <b>REST API &amp; integrations</b> — Shopify, Sheets, your warehouse</li>
+        <li>🎯 <b>Custom fine-tuning</b> — a model trained on your history</li>
+      </ul>
+      <a id="contact-cta" class="cta" href="#">Get API access →</a>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p>
+      Powered by <a href="https://github.com/google-research/timesfm" target="_blank" rel="noopener">TimesFM</a>
+      (Google Research, ICML 2024). This demo is not affiliated with or endorsed by Google.
+    </p>
+  </footer>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>

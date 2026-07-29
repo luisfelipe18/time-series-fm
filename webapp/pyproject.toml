@@ -1,0 +1,25 @@
+[project]
+name = "timesfm-forecast-demo"
+version = "1.0.0"
+description = "Public web demo for zero-shot forecasting with Google TimesFM 2.5."
+requires-python = ">=3.10"
+
+# Base (light) dependencies — always installed. The web app runs on these using
+# the transparent statistical fallback engine, with NO torch / model download.
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "python-multipart>=0.0.9",
+    "pandas>=2.0",
+    "numpy>=1.26.4",
+]
+
+[project.optional-dependencies]
+# The real deal: pulls in TimesFM 2.5 + torch (~800 MB weights on first use).
+# Installed by `./run.sh` (default) via `uv sync --extra full`.
+full = [
+    "timesfm[torch]>=2.0.2",
+]
+
+[tool.uv]
+package = false
