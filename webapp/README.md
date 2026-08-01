@@ -68,6 +68,18 @@ Language is resolved in this order:
 Prepared datasets carry `title_es` / `description_es` in `samples/manifest.json`
 next to the English fields; add both when you add a dataset.
 
+## Commercial model
+
+The service is sold **API-only** — the engine is never licensed or installed on
+client infrastructure. Billing unit is the **projection** (one series returned).
+Plans, unit economics and the rationale are in
+[`BUSINESS_MODEL.md`](BUSINESS_MODEL.md).
+
+Published rates live in `frontend/i18n.js` under the `pr.*` keys and render in
+section IV of the page. **They must stay in step with `BUSINESS_MODEL.md`** —
+changing one without the other puts a different number on the page than in the
+commercial document.
+
 ## House style
 
 Warm ivory ground, ink text, English racing green, claret and aged brass.

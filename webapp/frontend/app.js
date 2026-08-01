@@ -120,6 +120,7 @@ function applyLanguage() {
     encodeURIComponent(t("eng.mailSubject", { brand: c.brand }));
 
   // Language-dependent content that is already on screen
+  renderPricing();
   renderSampleList();
   if (S.data) {
     renderDataStatus();
@@ -138,6 +139,42 @@ function setHorizonLabel() {
 function renderRateInfo() {
   if (!S.rate) { $("rate-info").textContent = ""; return; }
   $("rate-info").textContent = t("rate.remaining", S.rate);
+}
+
+// ---------------------------------------------------------------- pricing
+// Order matters: it is the order shown on the page.
+const PLANS = ["trial", "portfolio", "institutional", "bespoke"];
+const FEATURED_PLAN = "institutional";
+
+function renderPricing() {
+  const grid = $("pricing-grid");
+  grid.innerHTML = PLANS.map((id) => {
+    const featured = id === FEATURED_PLAN;
+    const name = t(`pr.${id}.name`);
+    const features = t(`pr.${id}.f`)
+      .split("|")
+      .map((f) => `<li>${escapeHtml(f.trim())}</li>`)
+      .join("");
+    const mail =
+      `mailto:${S.cfg.contact_email}?subject=` +
+      encodeURIComponent(t("pr.mailSubject", { plan: name }));
+    return `
+      <div class="plan${featured ? " featured" : ""}">
+        <p class="plan-flag">${featured ? escapeHtml(t("pr.featured")) : "&nbsp;"}</p>
+        <p class="plan-name">${escapeHtml(name)}</p>
+        <p class="plan-price">
+          <b>${escapeHtml(t(`pr.${id}.price`))}</b>
+          <span>${escapeHtml(t(`pr.${id}.unit`))}</span>
+        </p>
+        <ul class="plan-features">${features}</ul>
+        <a class="plan-cta${featured ? " primary" : ""}" href="${mail}">${escapeHtml(t(`pr.${id}.cta`))}</a>
+      </div>`;
+  }).join("");
+
+  $("pricing-fine").innerHTML = t("pricing.fine")
+    .split("|")
+    .map((n) => `<li>${escapeHtml(n.trim())}</li>`)
+    .join("");
 }
 
 // ---------------------------------------------------------------- engine

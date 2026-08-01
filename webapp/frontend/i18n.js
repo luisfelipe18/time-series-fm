@@ -94,6 +94,44 @@ const I18N = {
     "chart.origin": "ORIGEN",
     "chart.present": "PRESENTE",
 
+    // Tarifas. Las viñetas de cada plan van en una sola clave, separadas por "|".
+    "pricing.title": "Tarifas",
+    "pricing.note":
+      "El servicio se presta por API. Se cobra por proyección entregada, sin costo de instalación ni de puesta en marcha.",
+
+    "pr.trial.name": "Evaluación",
+    "pr.trial.price": "Sin costo",
+    "pr.trial.unit": "14 días",
+    "pr.trial.f":
+      "500 proyecciones|Una clave de API|Contexto de 512 períodos, horizonte 30|Documentación y ejemplos de integración|Sin datos de tarjeta",
+    "pr.trial.cta": "Solicitar acceso",
+
+    "pr.portfolio.name": "Cartera",
+    "pr.portfolio.price": "US$ 250",
+    "pr.portfolio.unit": "al mes",
+    "pr.portfolio.f":
+      "5.000 proyecciones al mes|Tres claves de API|Contexto de 2.048 períodos, horizonte 128|Excedente a US$ 0,04 por proyección|Atención por correo, dos días hábiles",
+    "pr.portfolio.cta": "Contratar",
+
+    "pr.institutional.name": "Institucional",
+    "pr.institutional.price": "US$ 1.000",
+    "pr.institutional.unit": "al mes",
+    "pr.institutional.f":
+      "50.000 proyecciones al mes|Claves ilimitadas|Contexto de 16.384 períodos, horizonte 512|Variables explicativas: precio, promoción, festivos|Vigilancia con aviso por webhook|Excedente a US$ 0,02 por proyección|Disponibilidad 99,5% · atención en 8 horas hábiles",
+    "pr.institutional.cta": "Contratar",
+
+    "pr.bespoke.name": "A medida",
+    "pr.bespoke.price": "Desde US$ 4.000",
+    "pr.bespoke.unit": "al mes",
+    "pr.bespoke.f":
+      "Volumen acordado por contrato|Calibración dedicada sobre su propia historia|Analista designado y revisión trimestral|Disponibilidad 99,9% con penalización|Residencia de datos y anexos contractuales",
+    "pr.bespoke.cta": "Conversemos",
+
+    "pr.featured": "Más contratado",
+    "pricing.fine":
+      "Se cobra una proyección por cada serie devuelta: una llamada con 300 series consume 300 proyecciones.|Al contratar por año se abonan diez meses.|Precios en dólares estadounidenses, sin impuestos.|El servicio se entrega exclusivamente por API. El motor no se licencia, no se exporta y no se instala en infraestructura del cliente.",
+    "pr.mailSubject": "Consulta — plan {plan}",
+
     "eng.title": "Contratación",
     "eng.note":
       "Esta demostración está deliberadamente limitada. Un encargo para cliente no lo está.",
@@ -243,6 +281,44 @@ const I18N = {
     "lg.actual": "Actual, withheld",
     "chart.origin": "ORIGIN",
     "chart.present": "PRESENT",
+
+    // Pricing. Each plan's bullets live in one key, separated by "|".
+    "pricing.title": "Terms",
+    "pricing.note":
+      "The service is delivered through our API. You are billed per projection returned — no installation fee, no onboarding charge.",
+
+    "pr.trial.name": "Evaluation",
+    "pr.trial.price": "No charge",
+    "pr.trial.unit": "14 days",
+    "pr.trial.f":
+      "500 projections|One API key|512-period context, horizon 30|Documentation and integration examples|No card details required",
+    "pr.trial.cta": "Request access",
+
+    "pr.portfolio.name": "Portfolio",
+    "pr.portfolio.price": "US$ 250",
+    "pr.portfolio.unit": "per month",
+    "pr.portfolio.f":
+      "5,000 projections per month|Three API keys|2,048-period context, horizon 128|Overage at US$ 0.04 per projection|Email support, two business days",
+    "pr.portfolio.cta": "Engage",
+
+    "pr.institutional.name": "Institutional",
+    "pr.institutional.price": "US$ 1,000",
+    "pr.institutional.unit": "per month",
+    "pr.institutional.f":
+      "50,000 projections per month|Unlimited keys|16,384-period context, horizon 512|Explanatory variables: price, promotion, holidays|Surveillance with webhook notice|Overage at US$ 0.02 per projection|99.5% availability · 8 business-hour response",
+    "pr.institutional.cta": "Engage",
+
+    "pr.bespoke.name": "Bespoke",
+    "pr.bespoke.price": "From US$ 4,000",
+    "pr.bespoke.unit": "per month",
+    "pr.bespoke.f":
+      "Volume agreed by contract|Dedicated calibration on your own history|Named analyst and quarterly review|99.9% availability with remedy|Data residency and contractual schedules",
+    "pr.bespoke.cta": "Let us talk",
+
+    "pr.featured": "Most engaged",
+    "pricing.fine":
+      "One projection is billed for each series returned: a call carrying 300 series consumes 300 projections.|Engage annually and ten months are payable.|Prices in United States dollars, exclusive of tax.|The service is delivered exclusively through the API. The engine is not licensed, not exported, and not installed on client infrastructure.",
+    "pr.mailSubject": "Enquiry — {plan} terms",
 
     "eng.title": "Engagement",
     "eng.note":
