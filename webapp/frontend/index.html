@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Meridian Forecasting — Private Demonstration</title>
-  <meta name="description" content="Meridian is a proprietary forecasting engine developed in-house. Submit a series and receive a calibrated projection with quantified uncertainty." />
+  <title>Meridian — Demostración privada</title>
+  <meta name="description" content="Meridian es un motor de proyección propietario, desarrollado internamente." />
   <link rel="stylesheet" href="/style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23F2EFE7'/><rect x='2.5' y='2.5' width='27' height='27' fill='none' stroke='%238C7238' stroke-width='1'/><text x='16' y='23' font-family='Georgia,serif' font-size='18' fill='%231B1A17' text-anchor='middle'>M</text></svg>" />
 </head>
@@ -16,32 +16,29 @@
         <span class="wordmark-mark">M</span>
         <span class="wordmark-text">
           <b id="brand">Meridian</b>
-          <i id="brand-suffix">Forecasting</i>
+          <i id="brand-suffix">Proyecciones</i>
         </span>
       </a>
       <div class="topbar-meta">
-        <span id="engine-badge" class="engine-badge">Engine · initialising</span>
+        <span id="engine-badge" class="engine-badge">Motor · iniciando</span>
+        <div class="lang-toggle" id="lang-toggle" role="group">
+          <button type="button" data-lang="es">ES</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
       </div>
     </div>
   </div>
 
   <header class="masthead">
     <div class="wrap">
-      <p class="eyebrow">Private demonstration</p>
-      <h1>
-        The quarter ahead,<br />
-        <em>quantified.</em>
-      </h1>
+      <p class="eyebrow" data-i18n="hero.eyebrow">Demostración privada</p>
+      <h1 data-i18n-html="hero.title">El trimestre que viene,<br /><em>cuantificado.</em></h1>
       <div class="rule-double" aria-hidden="true"></div>
-      <p class="deck">
-        Meridian is a proprietary forecasting engine developed and trained in-house
-        by our research team. Submit a series of your own and receive a calibrated
-        projection — with the uncertainty stated explicitly, not hidden — in seconds.
-      </p>
+      <p class="deck" data-i18n="hero.deck"></p>
       <dl class="credentials">
-        <div><dt>Method</dt><dd>Probabilistic, distribution&#8209;aware</dd></div>
-        <div><dt>Preparation</dt><dd>None. No model training required</dd></div>
-        <div><dt>Deliverable</dt><dd>Projection with stated confidence</dd></div>
+        <div><dt data-i18n="cred.method.t"></dt><dd data-i18n="cred.method.d"></dd></div>
+        <div><dt data-i18n="cred.prep.t"></dt><dd data-i18n="cred.prep.d"></dd></div>
+        <div><dt data-i18n="cred.deliver.t"></dt><dd data-i18n="cred.deliver.d"></dd></div>
       </dl>
       <p class="rate-info" id="rate-info"></p>
     </div>
@@ -54,23 +51,23 @@
       <div class="panel-head">
         <span class="numeral">I</span>
         <div>
-          <h2>Select a series</h2>
-          <p class="panel-note" id="limits-line">Loading demonstration parameters…</p>
+          <h2 data-i18n="p1.title"></h2>
+          <p class="panel-note" id="limits-line"></p>
         </div>
       </div>
 
       <div class="data-grid">
         <div>
-          <h3 class="label">Prepared datasets</h3>
+          <h3 class="label" data-i18n="p1.prepared"></h3>
           <div id="sample-list" class="sample-list"></div>
         </div>
         <div>
-          <h3 class="label">Or submit your own</h3>
+          <h3 class="label" data-i18n="p1.own"></h3>
           <label class="dropzone" id="dropzone">
             <input type="file" id="file-input" accept=".csv,text/csv" hidden />
             <span class="dz-rule"></span>
-            <span class="dz-title">Deposit a CSV file</span>
-            <span class="dz-sub">Drag it here, or <u>select from your device</u></span>
+            <span class="dz-title" data-i18n="p1.dz.title"></span>
+            <span class="dz-sub" data-i18n-html="p1.dz.sub"></span>
           </label>
           <p class="panel-note" id="upload-hint"></p>
         </div>
@@ -84,45 +81,48 @@
       <div class="panel-head">
         <span class="numeral">II</span>
         <div>
-          <h2>Specify the projection</h2>
-          <p class="panel-note">Choose the series to project and how far ahead to look.</p>
+          <h2 data-i18n="p2.title"></h2>
+          <p class="panel-note" data-i18n="p2.note"></p>
         </div>
       </div>
 
       <div class="controls">
         <div class="control">
-          <label class="label" for="target-col">Series to project</label>
+          <label class="label" for="target-col" data-i18n="p2.target"></label>
           <select id="target-col"></select>
         </div>
         <div class="control">
-          <label class="label" for="date-col">Period column <span class="opt">optional</span></label>
+          <label class="label" for="date-col">
+            <span data-i18n="p2.period"></span>
+            <span class="opt" data-i18n="p2.optional"></span>
+          </label>
           <select id="date-col"></select>
         </div>
         <div class="control control-wide">
-          <label class="label" for="horizon">
-            Horizon &nbsp;·&nbsp; <b id="horizon-val">24</b> periods ahead
-          </label>
+          <label class="label" for="horizon" id="horizon-label"></label>
           <input type="range" id="horizon" min="1" max="128" value="24" />
         </div>
         <div class="control control-wide">
-          <span class="label">Method of inspection</span>
+          <span class="label" data-i18n="p2.method"></span>
           <div class="segmented" id="mode-seg">
             <button data-mode="future" class="active">
-              <b>Projection</b><i>Extend the series forward</i>
+              <b data-i18n="p2.mode.future"></b><i data-i18n="p2.mode.futureSub"></i>
             </button>
             <button data-mode="backtest">
-              <b>Validation</b><i>Withhold recent history and score it</i>
+              <b data-i18n="p2.mode.backtest"></b><i data-i18n="p2.mode.backtestSub"></i>
             </button>
           </div>
         </div>
         <div class="control control-wide checkbox">
-          <label><input type="checkbox" id="nonneg" checked />
-            <span>This series cannot fall below zero <i>(volumes, revenue, counts)</i></span></label>
+          <label>
+            <input type="checkbox" id="nonneg" checked />
+            <span data-i18n-html="p2.nonneg"></span>
+          </label>
         </div>
       </div>
 
       <div class="panel-foot">
-        <button id="run-btn" class="btn-primary">Compute projection</button>
+        <button id="run-btn" class="btn-primary" data-i18n="p2.run"></button>
         <p class="panel-note" id="mode-hint"></p>
       </div>
     </section>
@@ -132,7 +132,7 @@
       <div class="panel-head">
         <span class="numeral">III</span>
         <div>
-          <h2>The projection</h2>
+          <h2 data-i18n="p3.title"></h2>
           <p class="panel-note" id="result-engine"></p>
         </div>
       </div>
@@ -145,7 +145,7 @@
       </figure>
 
       <div class="panel-foot panel-foot-split">
-        <button id="download-btn" class="btn-secondary">Download projection · CSV</button>
+        <button id="download-btn" class="btn-secondary" data-i18n="p3.download"></button>
       </div>
     </section>
 
@@ -154,43 +154,23 @@
       <div class="panel-head">
         <span class="numeral">&#167;</span>
         <div>
-          <h2>Engagement</h2>
-          <p class="panel-note">
-            This demonstration is deliberately constrained. A client engagement is not.
-          </p>
+          <h2 data-i18n="eng.title"></h2>
+          <p class="panel-note" data-i18n="eng.note"></p>
         </div>
       </div>
 
       <dl class="perks">
-        <div>
-          <dt>Portfolio scale</dt>
-          <dd>Thousands of series projected in a single instruction, on schedule.</dd>
-        </div>
-        <div>
-          <dt>Explanatory variables</dt>
-          <dd>Price, promotion, holiday and weather effects entered directly into the model.</dd>
-        </div>
-        <div>
-          <dt>Standing surveillance</dt>
-          <dd>Notification the moment a figure departs its expected interval.</dd>
-        </div>
-        <div>
-          <dt>Systems integration</dt>
-          <dd>A private endpoint into your warehouse, ledger or commerce platform.</dd>
-        </div>
-        <div>
-          <dt>Dedicated calibration</dt>
-          <dd>The engine tuned against your own history, held privately to your account.</dd>
-        </div>
-        <div>
-          <dt>Advisory</dt>
-          <dd>A named analyst accountable for the figures you present to your board.</dd>
-        </div>
+        <div><dt data-i18n="eng.scale.t"></dt><dd data-i18n="eng.scale.d"></dd></div>
+        <div><dt data-i18n="eng.vars.t"></dt><dd data-i18n="eng.vars.d"></dd></div>
+        <div><dt data-i18n="eng.watch.t"></dt><dd data-i18n="eng.watch.d"></dd></div>
+        <div><dt data-i18n="eng.integr.t"></dt><dd data-i18n="eng.integr.d"></dd></div>
+        <div><dt data-i18n="eng.calib.t"></dt><dd data-i18n="eng.calib.d"></dd></div>
+        <div><dt data-i18n="eng.advisory.t"></dt><dd data-i18n="eng.advisory.d"></dd></div>
       </dl>
 
       <div class="panel-foot">
-        <a id="contact-cta" class="btn-primary" href="#">Request an introduction</a>
-        <p class="panel-note">Enquiries are answered personally, within one business day.</p>
+        <a id="contact-cta" class="btn-primary" href="#" data-i18n="eng.cta"></a>
+        <p class="panel-note" data-i18n="eng.ctaNote"></p>
       </div>
     </section>
 
@@ -203,16 +183,13 @@
         <p class="footer-mark">
           <b id="footer-brand">Meridian</b> <span id="footer-est">MMXXVI</span>
         </p>
-        <p class="footer-legal">
-          Meridian operates a proprietary forecasting engine. Figures produced in this
-          demonstration are illustrative and are not investment, accounting or actuarial
-          advice. All rights reserved.
-        </p>
+        <p class="footer-legal" data-i18n="footer.legal"></p>
       </div>
     </div>
   </footer>
 
   <div id="toast" class="toast" hidden></div>
+  <script src="/i18n.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

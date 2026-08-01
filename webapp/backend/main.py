@@ -51,6 +51,19 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def api_error(status: int, code: str, message: str, headers=None, **params):
+    """Raise a machine-readable error.
+
+    ``code`` and ``params`` let the client render the message in the user's
+    language; ``message`` is the English fallback for direct API consumers.
+    """
+    return HTTPException(
+        status_code=status,
+        detail={"code": code, "message": message, "params": params},
+        headers=headers,
+    )
+
+
 # --------------------------------------------------------------------- health
 @app.get("/api/health")
 def health() -> dict:
@@ -102,21 +115,19 @@ def _column_data(series: pd.Series) -> list:
 async def inspect(file: UploadFile = File(...)) -> dict:
     raw = await file.read(settings.MAX_FILE_SIZE_BYTES + 1)
     if len(raw) > settings.MAX_FILE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Demo limit is "
-            f"{settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB.",
-        )
+        mb = settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)
+        raise api_error(413, "FILE_TOO_LARGE",
+                        f"File too large. Demo limit is {mb} MB.", mb=mb)
     if not raw:
-        raise HTTPException(status_code=400, detail="Empty file.")
+        raise api_error(400, "EMPTY_FILE", "Empty file.")
 
     try:
         df = pd.read_csv(io.BytesIO(raw))
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {exc}")
+        raise api_error(400, "CSV_PARSE", f"Could not parse CSV: {exc}")
 
     if df.shape[1] == 0 or df.shape[0] == 0:
-        raise HTTPException(status_code=400, detail="CSV has no rows/columns.")
+        raise api_error(400, "CSV_EMPTY", "CSV has no rows/columns.")
 
     col_truncated = df.shape[1] > settings.MAX_COLUMNS
     if col_truncated:
@@ -153,10 +164,7 @@ async def inspect(file: UploadFile = File(...)) -> dict:
             ]
 
     if not numeric_columns:
-        raise HTTPException(
-            status_code=400,
-            detail="No numeric columns found to forecast.",
-        )
+        raise api_error(400, "NO_NUMERIC", "No numeric columns found to forecast.")
 
     preview = json.loads(
         df.head(8).astype(object).where(pd.notna(df.head(8)), None).to_json(orient="records")
@@ -212,34 +220,31 @@ def forecast(req: ForecastRequest, request: Request, response: Response) -> dict
     # ---- rate limit -------------------------------------------------------
     allowed, retry_after, remaining = limiter.check(client_ip(request))
     if not allowed:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Demo rate limit reached "
-            f"({settings.RATE_LIMIT_FORECASTS} forecasts per "
-            f"{settings.RATE_LIMIT_WINDOW_SEC // 60} min). Try again in "
-            f"{retry_after}s or contact us for an API key.",
+        minutes = settings.RATE_LIMIT_WINDOW_SEC // 60
+        raise api_error(
+            429, "RATE_LIMITED",
+            f"Demo rate limit reached ({settings.RATE_LIMIT_FORECASTS} per "
+            f"{minutes} min). Try again in {retry_after}s.",
             headers={"Retry-After": str(retry_after)},
+            limit=settings.RATE_LIMIT_FORECASTS, minutes=minutes, retry=retry_after,
         )
 
     # ---- validate volume --------------------------------------------------
     if req.horizon > settings.MAX_HORIZON:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Horizon too large. Demo max is {settings.MAX_HORIZON}.",
-        )
+        raise api_error(400, "HORIZON_TOO_LARGE",
+                        f"Horizon too large. Demo max is {settings.MAX_HORIZON}.",
+                        max=settings.MAX_HORIZON)
     if len(req.values) > settings.MAX_ROWS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Too many points. Demo max is {settings.MAX_ROWS} per series.",
-        )
+        raise api_error(400, "TOO_MANY_POINTS",
+                        f"Too many points. Demo max is {settings.MAX_ROWS} per series.",
+                        max=settings.MAX_ROWS)
 
     series = clean_series(req.values)
     if len(series) < settings.MIN_POINTS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Need at least {settings.MIN_POINTS} valid points "
-            f"(got {len(series)}).",
-        )
+        raise api_error(400, "TOO_FEW_POINTS",
+                        f"Need at least {settings.MIN_POINTS} valid points "
+                        f"(got {len(series)}).",
+                        min=settings.MIN_POINTS, got=len(series))
 
     response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_FORECASTS)
     response.headers["X-RateLimit-Remaining"] = str(remaining)
@@ -247,12 +252,11 @@ def forecast(req: ForecastRequest, request: Request, response: Response) -> dict
     # ---- run --------------------------------------------------------------
     if req.mode == "backtest":
         if len(series) < settings.MIN_POINTS + req.horizon:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Backtest needs at least "
-                f"{settings.MIN_POINTS + req.horizon} points for horizon "
-                f"{req.horizon}. Reduce the horizon or use a longer series.",
-            )
+            need = settings.MIN_POINTS + req.horizon
+            raise api_error(400, "BACKTEST_TOO_SHORT",
+                            f"Backtest needs at least {need} points for horizon "
+                            f"{req.horizon}. Reduce the horizon or use a longer series.",
+                            need=need, horizon=req.horizon)
         train, actual = series[: -req.horizon], series[-req.horizon:]
         point, quant, engine = forecaster.forecast(train, req.horizon, req.force_nonneg)
         metrics = compute_metrics(actual, point, quant)
@@ -298,10 +302,17 @@ def forecast(req: ForecastRequest, request: Request, response: Response) -> dict
 
 @app.exception_handler(HTTPException)
 async def http_exc_handler(request: Request, exc: HTTPException):
+    detail = exc.detail
+    if isinstance(detail, dict) and "code" in detail:
+        content = {
+            "error": detail.get("message", ""),
+            "code": detail["code"],
+            "params": detail.get("params", {}),
+        }
+    else:
+        content = {"error": detail}
     return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": exc.detail},
-        headers=exc.headers or {},
+        status_code=exc.status_code, content=content, headers=exc.headers or {}
     )
 
 

@@ -40,10 +40,17 @@ class Settings:
     ALLOW_FALLBACK: bool = _bool("DEMO_ALLOW_FALLBACK", True)
 
     # ---- Branding / lead capture -----------------------------------------
-    CONTACT_EMAIL: str = os.getenv("DEMO_CONTACT_EMAIL", "advisory@meridianforecasting.com")
+    CONTACT_EMAIL: str = os.getenv("DEMO_CONTACT_EMAIL", "sales@vilcongroup.com")
     BRAND: str = os.getenv("DEMO_BRAND", "Meridian")
-    BRAND_SUFFIX: str = os.getenv("DEMO_BRAND_SUFFIX", "Forecasting")
+    # Unset by default so the wordmark suffix follows the selected language.
+    # Setting it pins one wording in both languages.
+    BRAND_SUFFIX: str | None = os.getenv("DEMO_BRAND_SUFFIX") or None
     ESTABLISHED: str = os.getenv("DEMO_ESTABLISHED", "MMXXVI")
+    DEFAULT_LANG: str = os.getenv("DEMO_DEFAULT_LANG", "es")
+    # Off by default: an explicitly configured default language should not be
+    # overridden by the visitor's browser locale. A returning visitor's own
+    # choice always wins over both.
+    RESPECT_BROWSER_LANG: bool = _bool("DEMO_RESPECT_BROWSER_LANG", False)
 
     def public_dict(self) -> dict:
         """Limits exposed to the frontend so it can enforce/display them."""
@@ -60,6 +67,8 @@ class Settings:
             "brand": self.BRAND,
             "brand_suffix": self.BRAND_SUFFIX,
             "established": self.ESTABLISHED,
+            "default_lang": self.DEFAULT_LANG,
+            "respect_browser_lang": self.RESPECT_BROWSER_LANG,
         }
 
 

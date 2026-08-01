@@ -18,7 +18,9 @@ cd webapp
 LITE=1 ./run.sh          # baseline engine only (no torch, no model download)
 ```
 
-Then open <http://localhost:8000>. Override the port with `PORT=9000 ./run.sh`.
+`run.sh` uses the `uv` already installed on the machine, creates `.venv` if it is
+missing, installs dependencies, and serves on **port 7070**.
+Open <http://localhost:7070>. Override with `PORT=8080 ./run.sh`.
 
 ## White-labelling (important)
 
@@ -40,10 +42,31 @@ redistribute the code itself, keep those notices intact.
 Verify the public surface stays clean after any change:
 
 ```bash
-for p in / /app.js /style.css /api/health /api/config /api/samples /openapi.json; do
-  echo "$p -> $(curl -s "http://localhost:8000$p" | grep -ci 'timesfm\|google') hit(s)"
+for p in / /app.js /i18n.js /style.css /api/health /api/config /api/samples /openapi.json; do
+  echo "$p -> $(curl -s "http://localhost:7070$p" | grep -ci 'timesfm\|google') hit(s)"
 done
 ```
+
+## Languages
+
+The interface is bilingual, Spanish and English, switched by the ES/EN control in
+the top bar. All copy lives in `frontend/i18n.js`; nothing is hard-coded in the
+markup — every string carries a `data-i18n` key.
+
+Server-side messages are localised too: the API returns a machine-readable
+`code` plus `params` (e.g. `TOO_FEW_POINTS` with `{min, got}`) alongside an
+English `message`, and the client renders it in the active language. Direct API
+consumers can keep reading `error` as before.
+
+Language is resolved in this order:
+
+1. the visitor's own choice, remembered in `localStorage`;
+2. `DEMO_DEFAULT_LANG` (default `es`);
+3. the browser locale — **only** if `DEMO_RESPECT_BROWSER_LANG=1`, since an
+   explicitly configured default should not be overridden by a visitor's locale.
+
+Prepared datasets carry `title_es` / `description_es` in `samples/manifest.json`
+next to the English fields; add both when you add a dataset.
 
 ## House style
 
@@ -65,8 +88,11 @@ All limits live in `backend/config.py`, each overridable by environment variable
 | Min points to forecast | 32 | `DEMO_MIN_POINTS` |
 | Max horizon | 128 | `DEMO_MAX_HORIZON` |
 | Computations per IP / window | 40 / 60 min | `DEMO_RATE_FORECASTS`, `DEMO_RATE_WINDOW` |
-| Brand / suffix / established | Meridian · Forecasting · MMXXVI | `DEMO_BRAND`, `DEMO_BRAND_SUFFIX`, `DEMO_ESTABLISHED` |
-| Contact address | — | `DEMO_CONTACT_EMAIL` |
+| Brand / established | Meridian · MMXXVI | `DEMO_BRAND`, `DEMO_ESTABLISHED` |
+| Wordmark suffix | follows the language | `DEMO_BRAND_SUFFIX` (set to pin one wording) |
+| Contact address | sales@vilcongroup.com | `DEMO_CONTACT_EMAIL` |
+| Default language | `es` | `DEMO_DEFAULT_LANG` |
+| Follow browser locale | off | `DEMO_RESPECT_BROWSER_LANG` |
 | Force baseline engine | off | `DEMO_FORCE_FALLBACK` |
 
 Over-limit files are **trimmed** (most recent rows, first columns) and the UI
@@ -121,10 +147,11 @@ webapp/
 ├── frontend/
 │   ├── index.html
 │   ├── style.css       house style
+│   ├── i18n.js         Spanish/English copy and the t() helper
 │   ├── app.js          CSV handling, API calls, canvas chart
 │   └── samples/        prepared CSVs + manifest.json
 ├── pyproject.toml      uv project (model backend is the optional `full` extra)
-└── run.sh              uv sync + uvicorn
+└── run.sh              uv venv + uv sync + uvicorn on :7070
 ```
 
 ## Production notes

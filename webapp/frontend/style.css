@@ -88,12 +88,26 @@ a:hover { color: var(--oxblood); }
   letter-spacing: .2em; font-size: 9px; color: var(--ink-4); margin-top: 2px;
 }
 
+.topbar-meta { display: flex; align-items: center; gap: 16px; }
+
 .engine-badge {
   color: var(--ink-3);
   border: 1px solid var(--rule);
   padding: 6px 12px;
   white-space: nowrap;
 }
+
+/* Language selector — understated, set as a pair of small-cap marks. */
+.lang-toggle { display: flex; align-items: stretch; border: 1px solid var(--rule); }
+.lang-toggle button {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--sans); text-transform: uppercase;
+  letter-spacing: .14em; font-size: 10.5px; font-weight: 600;
+  color: var(--ink-4); padding: 7px 11px; transition: color .14s, background-color .14s;
+}
+.lang-toggle button + button { border-left: 1px solid var(--rule); }
+.lang-toggle button:hover { color: var(--ink); }
+.lang-toggle button.active { background: var(--green); color: #F6F3EB; }
 .engine-badge.live   { color: var(--green);  border-color: rgba(30,58,48,.30); }
 .engine-badge.reduced{ color: var(--brass);  border-color: rgba(140,114,56,.35); }
 
