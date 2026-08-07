@@ -80,7 +80,9 @@ def _sample_manifest() -> list[dict]:
     manifest_path = SAMPLES_DIR / "manifest.json"
     if manifest_path.exists():
         try:
-            return json.loads(manifest_path.read_text())
+            # encoding is explicit: read_text() would otherwise use the platform
+            # default, which is cp1252 on Windows and mangles the accents.
+            return json.loads(manifest_path.read_text(encoding="utf-8"))
         except Exception:
             pass
     return []
@@ -111,6 +113,21 @@ def _column_data(series: pd.Series) -> list:
     return [None if pd.isna(v) else float(v) for v in series]
 
 
+def _decode_csv(raw: bytes) -> str:
+    """Decode an uploaded CSV without assuming UTF-8.
+
+    Excel on a Spanish-language Windows writes cp1252, so a column named
+    "Año" would otherwise fail outright with a UnicodeDecodeError. utf-8-sig
+    covers UTF-8 with a byte-order mark, which Excel also emits.
+    """
+    for encoding in ("utf-8-sig", "cp1252"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1")  # maps every byte; cannot raise
+
+
 @app.post("/api/inspect")
 async def inspect(file: UploadFile = File(...)) -> dict:
     raw = await file.read(settings.MAX_FILE_SIZE_BYTES + 1)
@@ -122,7 +139,7 @@ async def inspect(file: UploadFile = File(...)) -> dict:
         raise api_error(400, "EMPTY_FILE", "Empty file.")
 
     try:
-        df = pd.read_csv(io.BytesIO(raw))
+        df = pd.read_csv(io.StringIO(_decode_csv(raw)))
     except Exception as exc:
         raise api_error(400, "CSV_PARSE", f"Could not parse CSV: {exc}")
 
