@@ -12,15 +12,29 @@ or a **validation** run that scores the engine against withheld history.
 
 ## Quick start
 
+Linux / macOS:
+
 ```bash
 cd webapp
 ./run.sh                 # full engine
 LITE=1 ./run.sh          # baseline engine only (no torch, no model download)
 ```
 
-`run.sh` uses the `uv` already installed on the machine, creates `.venv` if it is
-missing, installs dependencies, and serves on **port 7070**.
-Open <http://localhost:7070>. Override with `PORT=8080 ./run.sh`.
+Windows:
+
+```bat
+cd webapp
+run.bat
+set LITE=1 && run.bat     :: baseline engine only
+```
+
+Both scripts use the `uv` already installed on the machine, create `.venv` if it
+is missing, install dependencies, and serve on **port 7070**.
+Open <http://localhost:7070>. Override with `PORT=8080 ./run.sh` (or
+`set PORT=8080 && run.bat`).
+
+> `run.bat` must keep CRLF line endings — `.gitattributes` enforces this, since
+> `cmd.exe` mis-parses batch files saved with Unix endings.
 
 ## White-labelling (important)
 
@@ -163,7 +177,8 @@ webapp/
 │   ├── app.js          CSV handling, API calls, canvas chart
 │   └── samples/        prepared CSVs + manifest.json
 ├── pyproject.toml      uv project (model backend is the optional `full` extra)
-└── run.sh              uv venv + uv sync + uvicorn on :7070
+├── run.sh              uv venv + uv sync + uvicorn on :7070 (Linux/macOS)
+└── run.bat             the same, for Windows (CRLF endings)
 ```
 
 ## Production notes
