@@ -36,6 +36,35 @@ Open <http://localhost:7070>. Override with `PORT=8080 ./run.sh` (or
 > `run.bat` must keep CRLF line endings — `.gitattributes` enforces this, since
 > `cmd.exe` mis-parses batch files saved with Unix endings.
 
+### Older CPUs, and CPU-masked VMs
+
+`requires-python` is capped at `<3.13` and numpy at `<2` **deliberately**.
+
+numpy 2.x wheels are built with an **x86-64-v2** baseline (SSE4.2, POPCNT,
+SSSE3…). On a pre-Nehalem CPU — or, far more commonly, a VM whose hypervisor
+presents a generic CPU model and masks those flags — importing numpy aborts:
+
+```
+RuntimeError: NumPy was built with baseline optimizations:
+(X86_V2) but your machine doesn't support: (X86_V2).
+```
+
+numpy 1.26 uses an SSE3 baseline and runs on those machines, but it publishes
+no wheels for Python 3.13+ — hence the interpreter cap. `uv sync` re-creates a
+`.venv` automatically if its interpreter falls outside the range, so the fix
+needs no manual cleanup.
+
+To confirm what a machine actually offers:
+
+```powershell
+Get-CimInstance Win32_Processor | Select-Object Name, Description
+```
+
+If it is a VM you control, switching the guest CPU model to host-passthrough
+(instead of a compatibility model) restores the flags and lets you lift both
+pins. If `torch` also fails on the same machine, run the demo in LITE mode —
+the baseline engine is pure numpy/pandas and needs no torch at all.
+
 ## White-labelling (important)
 
 The public surface is deliberately **unbranded with respect to the upstream

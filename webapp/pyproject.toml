@@ -2,7 +2,10 @@
 name = "timesfm-forecast-demo"
 version = "1.0.0"
 description = "Public web demo for zero-shot forecasting with Google TimesFM 2.5."
-requires-python = ">=3.10"
+# Capped at <3.13 on purpose: it is the newest Python for which numpy 1.x still
+# ships wheels, and numpy 1.x is what runs on CPUs without the x86-64-v2
+# instruction set (see the numpy pin below).
+requires-python = ">=3.10,<3.13"
 
 # Base (light) dependencies — always installed. The web app runs on these using
 # the transparent statistical fallback engine, with NO torch / model download.
@@ -10,8 +13,13 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "python-multipart>=0.0.9",
-    "pandas>=2.0",
-    "numpy>=1.26.4",
+    "pandas>=2.0,<3",
+    # numpy 2.x wheels are built with an x86-64-v2 baseline (SSE4.2, POPCNT…).
+    # Older physical CPUs — and VMs whose hypervisor masks CPU features — abort
+    # at import with "NumPy was built with baseline optimizations (X86_V2) but
+    # your machine doesn't support it". numpy 1.26 uses an SSE3 baseline and
+    # runs everywhere. Lift this pin only if every target machine is x86-64-v2.
+    "numpy>=1.26.4,<2",
 ]
 
 [project.optional-dependencies]
