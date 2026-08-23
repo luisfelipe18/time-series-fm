@@ -1,3 +1,9 @@
+charting.js is Apache ECharts (https://echarts.apache.org), unmodified,
+renamed only because content blockers match on library file names and
+were silently dropping the request. Licence in full below.
+
+======================================================================
+
 
                                  Apache License
                            Version 2.0, January 2004

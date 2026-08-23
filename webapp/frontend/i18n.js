@@ -93,7 +93,7 @@ const I18N = {
     "lg.i80": "Intervalo 80%",
     "lg.actual": "Real, retenido",
     "chart.libMissing":
-      "No se pudo cargar el componente del gr\u00e1fico. Recargue la p\u00e1gina forzando la actualizaci\u00f3n (Ctrl+F5). Si persiste, verifique que /vendor/echarts.min.js sea accesible.",
+      "No se pudo cargar el componente del gr\u00e1fico. Lo habitual es que un bloqueador de contenido o los escudos del navegador (Brave, uBlock, AdGuard) est\u00e9n descartando /vendor/charting.js: desact\u00edvelos para este sitio. Si no, recargue forzando la actualizaci\u00f3n.",
     "chart.origin": "ORIGEN",
     "chart.present": "PRESENTE",
     "chart.explain":
@@ -292,7 +292,7 @@ const I18N = {
     "lg.i80": "80% interval",
     "lg.actual": "Actual, withheld",
     "chart.libMissing":
-      "The charting component could not be loaded. Reload the page with a forced refresh (Ctrl+F5). If it persists, check that /vendor/echarts.min.js is reachable.",
+      "The charting component could not be loaded. Usually a content blocker or browser shield (Brave, uBlock, AdGuard) is dropping /vendor/charting.js: turn it off for this site. Otherwise reload with a forced refresh.",
     "chart.origin": "ORIGIN",
     "chart.present": "PRESENT",
     "chart.explain":

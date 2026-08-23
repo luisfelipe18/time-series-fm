@@ -207,8 +207,10 @@
   </footer>
 
   <div id="toast" class="toast" hidden></div>
-  <!-- ECharts, Apache-2.0, served locally: no third-party request from this page -->
-  <script src="/vendor/echarts.min.js"></script>
+  <!-- Apache ECharts (Apache-2.0), served locally: no third-party request.
+       Filename is neutral because content blockers match on library names
+       and were dropping it silently. See vendor/charting.LICENSE.txt -->
+  <script src="/vendor/charting.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
 </body>

@@ -42,7 +42,7 @@ REQUIRED_ASSETS = [
     FRONTEND_DIR / "app.js",
     FRONTEND_DIR / "i18n.js",
     FRONTEND_DIR / "style.css",
-    FRONTEND_DIR / "vendor" / "echarts.min.js",
+    FRONTEND_DIR / "vendor" / "charting.js",
 ]
 
 
@@ -448,7 +448,15 @@ class RevalidatingStatic(StaticFiles):
 
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
-        response.headers.setdefault("Cache-Control", "no-cache")
+        # The HTML document is never stored. It is a few kilobytes, and it is
+        # the one file whose staleness breaks everything else: a cached copy
+        # from before an asset was added keeps referencing the old set, and the
+        # page comes up broken with no way for the visitor to know why.
+        # Everything else revalidates, which the ETag settles in a 304.
+        if path.endswith(".html") or path in ("", "."):
+            response.headers["Cache-Control"] = "no-store, must-revalidate"
+        else:
+            response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
 

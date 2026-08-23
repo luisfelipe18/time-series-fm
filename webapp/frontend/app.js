@@ -654,9 +654,8 @@ function exportChart(kind) {
   if (!chartInst || !S.lastResult) return;
   const name = `meridian_${(S.lastResult.target || "series").replace(/\W+/g, "_")}`;
   if (kind === "png") {
-    triggerDownload(
-      chartInst.getDataURL({ type: "png", pixelRatio: 2, backgroundColor: "#FBF9F4" }),
-      name + ".png");
+    const url = chartInst.getDataURL({ type: "png", pixelRatio: 2, backgroundColor: "#FBF9F4" });
+    triggerDownload(dataUrlToBlobUrl(url), name + ".png", true);
     return;
   }
   // SVG: render the same option through an off-screen SVG instance, so the
@@ -672,17 +671,34 @@ function exportChart(kind) {
     tmp.setOption(opt, true);
     const svg = tmp.renderToSVGString();
     tmp.dispose();
-    triggerDownload("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg), name + ".svg");
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    triggerDownload(URL.createObjectURL(blob), name + ".svg", true);
   } finally {
     holder.remove();
   }
 }
 
-function triggerDownload(href, filename) {
+/** A data: URL of a few hundred KB is refused or truncated by some browsers;
+ *  a blob: URL is handled as a normal file download everywhere. */
+function dataUrlToBlobUrl(dataUrl) {
+  const [head, b64] = dataUrl.split(",");
+  const mime = (head.match(/:(.*?);/) || [, "application/octet-stream"])[1];
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return URL.createObjectURL(new Blob([bytes], { type: mime }));
+}
+
+function triggerDownload(href, filename, revoke) {
   const a = document.createElement("a");
   a.href = href;
   a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);   // Firefox ignores a click on a detached node
   a.click();
+  a.remove();
+  if (revoke) setTimeout(() => URL.revokeObjectURL(href), 30000);
 }
 
 function buildXLabels(r, total) {
