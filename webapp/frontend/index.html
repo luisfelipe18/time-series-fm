@@ -140,12 +140,17 @@
       <div id="metrics" class="metrics"></div>
 
       <figure class="chart-figure">
-        <div class="chart-holder"><canvas id="chart" width="1200" height="520"></canvas></div>
-        <figcaption id="chart-legend" class="chart-legend"></figcaption>
+        <div class="chart-holder"><div id="chart"></div></div>
+        <figcaption class="chart-caption">
+          <p id="chart-explain"></p>
+          <p id="chart-interact" class="chart-interact"></p>
+        </figcaption>
       </figure>
 
       <div class="panel-foot panel-foot-split">
         <button id="download-btn" class="btn-secondary" data-i18n="p3.download"></button>
+        <button id="png-btn" class="btn-secondary" data-i18n="chart.savePng"></button>
+        <button id="svg-btn" class="btn-secondary" data-i18n="chart.saveSvg"></button>
       </div>
     </section>
 
@@ -202,6 +207,8 @@
   </footer>
 
   <div id="toast" class="toast" hidden></div>
+  <!-- ECharts, Apache-2.0, served locally: no third-party request from this page -->
+  <script src="/vendor/echarts.min.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
 </body>

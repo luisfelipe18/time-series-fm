@@ -14,11 +14,19 @@ const C = {
   axis:       "rgba(27, 26, 23, 0.22)",
   divider:    "rgba(27, 26, 23, 0.30)",
   projection: "#6A2029",
-  band80:     "rgba(106, 32, 41, 0.095)",
-  band60:     "rgba(106, 32, 41, 0.155)",
+  // Las dos bandas se distinguen por TONO, no solo por opacidad: antes ambas
+  // eran clarete y se leian como una sola mancha.
+  band80:     "#DBCFB6",   // arena palida: el intervalo ancho, 80%
+  band60:     "#C29A9C",   // rosa clarete: el intervalo estrecho, 60%
   withheld:   "#1E3A30",
+  rule:       "#D5CEBD",
+  ink3:       "#6B6559",
+  green:      "#1E3A30",
   sans: '600 10px "Helvetica Neue", Helvetica, Arial, sans-serif',
 };
+
+const FONT_SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+const FONT_SERIF = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
 
 const ENGINE_PRIMARY = "meridian-core";
 const ENGINE_BASELINE = "meridian-baseline";
@@ -446,150 +454,227 @@ function renderResult(r) {
     .map((x) => `<div class="metric${x.accent ? " accent" : ""}"><div class="v">${x.v}</div><span class="k">${x.k}</span></div>`)
     .join("");
 
-  drawChart($("chart"), r);
-  renderLegend(r);
+  renderChart(r);
 
   $("result-engine").textContent = t("p3.note." + r.mode);
 }
 
-function renderLegend(r) {
-  const parts = [
-    `<span><i class="swatch" style="border-top-color:${C.ink}"></i>${t("lg.observed")}</span>`,
-    `<span><i class="swatch" style="border-top-color:${C.projection};border-top-style:dashed"></i>${t("lg.projection")}</span>`,
-    `<span><i class="swatch band" style="background:${C.band60}"></i>${t("lg.i60")}</span>`,
-    `<span><i class="swatch band" style="background:${C.band80}"></i>${t("lg.i80")}</span>`,
-  ];
-  if (r.mode === "backtest") {
-    parts.push(`<span><i class="swatch" style="border-top-color:${C.withheld}"></i>${t("lg.actual")}</span>`);
-  }
-  $("chart-legend").innerHTML = parts.join("");
-}
-
 // ---------------------------------------------------------------- chart
-function drawChart(canvas, r) {
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth || 1000;
-  const cssH = 440;
-  canvas.width = cssW * dpr;
-  canvas.height = cssH * dpr;
+let chartInst = null;
 
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cssW, cssH);
-
-  const padL = 68, padR = 24, padT = 26, padB = 40;
-  const W = cssW - padL - padR;
-  const H = cssH - padT - padB;
-
-  const hist = r.history;
-  const H0 = hist.length;
+/** Build the ECharts option object for a result. */
+function chartOption(r) {
+  setTipDigits(r);
+  const H0 = r.history.length;
   const Hz = r.horizon;
   const total = H0 + Hz;
-
-  let lo = Infinity, hi = -Infinity;
-  const consider = (a) => { for (const v of a) { if (v < lo) lo = v; if (v > hi) hi = v; } };
-  consider(hist); consider(r.point); consider(r.lower_80); consider(r.upper_80);
-  if (r.actual) consider(r.actual);
-  if (lo === hi) { lo -= 1; hi += 1; }
-  const margin = (hi - lo) * 0.1;
-  const scale = niceScale(lo - margin, hi + margin, 5);
-  lo = scale.lo; hi = scale.hi;
-
-  const xAt = (i) => padL + (total <= 1 ? 0 : (i / (total - 1)) * W);
-  const yAt = (v) => padT + H - ((v - lo) / (hi - lo)) * H;
-
-  // horizontal rules + y labels, on round figures
-  ctx.font = C.sans;
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  for (let v = lo; v <= hi + scale.step * 1e-6; v += scale.step) {
-    const y = Math.round(yAt(v)) + 0.5;
-    ctx.strokeStyle = C.grid;
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + W, y); ctx.stroke();
-    ctx.fillStyle = C.inkFaint;
-    ctx.fillText(fmtNum(v), padL - 12, y);
-  }
-
-  // axes
-  ctx.strokeStyle = C.axis;
-  ctx.beginPath();
-  ctx.moveTo(padL + 0.5, padT); ctx.lineTo(padL + 0.5, padT + H);
-  ctx.moveTo(padL, padT + H + 0.5); ctx.lineTo(padL + W, padT + H + 0.5);
-  ctx.stroke();
-
-  const joinX = H0 - 1;
-  const joinY = hist[hist.length - 1];
-
-  // intervals — widest first
-  ctx.fillStyle = C.band80;
-  ctx.beginPath();
-  ctx.moveTo(xAt(joinX), yAt(joinY));
-  for (let h = 0; h < Hz; h++) ctx.lineTo(xAt(H0 + h), yAt(r.upper_80[h]));
-  for (let h = Hz - 1; h >= 0; h--) ctx.lineTo(xAt(H0 + h), yAt(r.lower_80[h]));
-  ctx.closePath(); ctx.fill();
-
-  ctx.fillStyle = C.band60;
-  ctx.beginPath();
-  ctx.moveTo(xAt(joinX), yAt(joinY));
-  for (let h = 0; h < Hz; h++) ctx.lineTo(xAt(H0 + h), yAt(r.upper_60[h]));
-  for (let h = Hz - 1; h >= 0; h--) ctx.lineTo(xAt(H0 + h), yAt(r.lower_60[h]));
-  ctx.closePath(); ctx.fill();
-
-  // observed history
-  drawLine(ctx, hist.map((v, i) => [xAt(i), yAt(v)]), C.ink, 1.4);
-
-  // withheld actuals (validation mode)
-  if (r.actual) {
-    const pts = r.actual.map((v, h) => [xAt(H0 + h), yAt(v)]);
-    pts.unshift([xAt(joinX), yAt(joinY)]);
-    drawLine(ctx, pts, C.withheld, 1.9);
-  }
-
-  // projection — dashed, per the convention that projected figures are never
-  // drawn as though they were observed
-  const fpts = r.point.map((v, h) => [xAt(H0 + h), yAt(v)]);
-  fpts.unshift([xAt(joinX), yAt(joinY)]);
-  drawLine(ctx, fpts, C.projection, 1.9, [5, 3]);
-
-  // origin divider
-  ctx.strokeStyle = C.divider;
-  ctx.lineWidth = 1;
-  ctx.setLineDash([2, 4]);
-  ctx.beginPath();
-  ctx.moveTo(Math.round(xAt(joinX)) + 0.5, padT);
-  ctx.lineTo(Math.round(xAt(joinX)) + 0.5, padT + H);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.fillStyle = C.inkFaint;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillText(t(r.mode === "backtest" ? "chart.origin" : "chart.present"), xAt(joinX), padT - 16);
-
-  // x labels
+  const join = H0 - 1;                     // last observed point
+  const joinY = r.history[H0 - 1];
   const labels = buildXLabels(r, total);
-  const step = Math.max(1, Math.floor(total / 7));
-  for (let i = 0; i < total; i += step) {
-    ctx.textAlign = i === 0 ? "left" : "center";
-    ctx.fillText(labels[i], xAt(i), padT + H + 12);
+
+  const nulls = () => new Array(total).fill(null);
+
+  // Bands are drawn as two stacked series each: an invisible floor plus the
+  // span above it. Both start pinched at the last observed point so the fan
+  // opens from the series rather than floating beside it.
+  const lo80 = nulls(), sp80 = nulls(), lo60 = nulls(), sp60 = nulls();
+  lo80[join] = joinY; sp80[join] = 0;
+  lo60[join] = joinY; sp60[join] = 0;
+  for (let h = 0; h < Hz; h++) {
+    const i = H0 + h;
+    lo80[i] = r.lower_80[h]; sp80[i] = r.upper_80[h] - r.lower_80[h];
+    lo60[i] = r.lower_60[h]; sp60[i] = r.upper_60[h] - r.lower_60[h];
+  }
+
+  const observed = nulls();
+  for (let i = 0; i < H0; i++) observed[i] = r.history[i];
+
+  const projection = nulls();
+  projection[join] = joinY;
+  for (let h = 0; h < Hz; h++) projection[H0 + h] = r.point[h];
+
+  let actual = null;
+  if (r.actual) {
+    actual = nulls();
+    actual[join] = joinY;
+    for (let h = 0; h < Hz; h++) actual[H0 + h] = r.actual[h];
+  }
+
+  const floor = (data, stack) => ({
+    name: "__floor_" + stack, type: "line", stack, data,
+    lineStyle: { opacity: 0 }, areaStyle: { opacity: 0 },
+    symbol: "none", silent: true, z: 1,
+    tooltip: { show: false }, legendHoverLink: false,
+  });
+  const span = (data, stack, colour, z) => ({
+    name: "__span_" + stack, type: "line", stack, data,
+    lineStyle: { opacity: 0 }, areaStyle: { color: colour, opacity: 0.55 },
+    symbol: "none", silent: true, z,
+    tooltip: { show: false }, legendHoverLink: false,
+  });
+
+  const series = [
+    floor(lo80, "b80"), span(sp80, "b80", C.band80, 1),
+    floor(lo60, "b60"), span(sp60, "b60", C.band60, 2),
+    {
+      name: t("lg.observed"), type: "line", data: observed, z: 6,
+      showSymbol: false, symbolSize: 7,
+      lineStyle: { color: C.ink, width: 1.4 },
+      itemStyle: { color: C.ink },
+    },
+    {
+      name: t("lg.projection"), type: "line", data: projection, z: 7,
+      showSymbol: false, symbolSize: 7,
+      lineStyle: { color: C.projection, width: 1.9, type: "dashed" },
+      itemStyle: { color: C.projection },
+      markLine: {
+        symbol: "none", silent: true, animation: false,
+        lineStyle: { color: C.divider, type: [2, 4], width: 1 },
+        label: {
+          formatter: t(r.mode === "backtest" ? "chart.origin" : "chart.present"),
+          position: "insideEndTop", color: C.inkFaint,
+          fontFamily: FONT_SANS, fontSize: 10, fontWeight: 600,
+        },
+        data: [{ xAxis: join }],
+      },
+    },
+  ];
+  if (actual) {
+    series.push({
+      name: t("lg.actual"), type: "line", data: actual, z: 8,
+      showSymbol: false, symbolSize: 7,
+      lineStyle: { color: C.withheld, width: 1.9 },
+      itemStyle: { color: C.withheld },
+    });
+  }
+
+  return {
+    animation: false,
+    backgroundColor: "transparent",
+    textStyle: { fontFamily: FONT_SANS },
+    grid: { left: 68, right: 26, top: 40, bottom: 58, containLabel: false },
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "#FBF9F4",
+      borderColor: C.rule,
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: { color: C.ink, fontFamily: FONT_SERIF, fontSize: 13 },
+      axisPointer: { type: "line", lineStyle: { color: C.divider, width: 1, type: "dashed" } },
+      formatter: (params) => {
+        const shown = params.filter((p) => !String(p.seriesName).startsWith("__")
+                                        && p.value !== null && p.value !== undefined);
+        if (!shown.length) return "";
+        const head = `<div style="font-family:${FONT_SANS};font-size:10px;letter-spacing:.12em;
+                     text-transform:uppercase;color:${C.inkFaint};margin-bottom:6px">
+                     ${shown[0].axisValueLabel}</div>`;
+        const rows = shown.map((p) =>
+          `<div style="display:flex;gap:14px;justify-content:space-between">
+             <span>${p.marker} ${p.seriesName}</span>
+             <b style="font-variant-numeric:tabular-nums">${fmtTooltip(p.value)}</b>
+           </div>`).join("");
+        // Interval bounds for the projected periods, read straight off the result.
+        const h = params[0].dataIndex - H0;
+        let band = "";
+        if (h >= 0 && h < Hz) {
+          band = `<div style="margin-top:7px;padding-top:7px;border-top:1px solid ${C.rule};
+                   font-size:12px;color:${C.inkFaint}">
+                   ${t("lg.i60")}: ${fmtTooltip(r.lower_60[h])} – ${fmtTooltip(r.upper_60[h])}<br/>
+                   ${t("lg.i80")}: ${fmtTooltip(r.lower_80[h])} – ${fmtTooltip(r.upper_80[h])}
+                 </div>`;
+        }
+        return head + rows + band;
+      },
+    },
+    legend: {
+      data: series.filter((x) => !x.name.startsWith("__")).map((x) => x.name),
+      bottom: 0, icon: "roundRect", itemWidth: 14, itemHeight: 4, itemGap: 22,
+      textStyle: {
+        color: C.ink3, fontFamily: FONT_SANS, fontSize: 10,
+        fontWeight: 600, padding: [0, 0, 0, 4],
+      },
+    },
+    toolbox: {
+      right: 8, top: 0, itemGap: 12,
+      iconStyle: { borderColor: C.inkFaint, borderWidth: 1.2 },
+      emphasis: { iconStyle: { borderColor: C.green } },
+      feature: {
+        dataZoom: {
+          yAxisIndex: "none",
+          title: { zoom: t("chart.zoomIn"), back: t("chart.zoomReset") },
+        },
+        restore: { title: t("chart.zoomReset") },
+      },
+    },
+    dataZoom: [
+      { type: "inside", xAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: false },
+    ],
+    xAxis: {
+      type: "category", data: labels, boundaryGap: false,
+      axisLine: { lineStyle: { color: C.axis } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: C.inkFaint, fontFamily: FONT_SANS, fontSize: 10,
+        fontWeight: 600, hideOverlap: true,
+      },
+    },
+    yAxis: {
+      type: "value", scale: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: C.grid } },
+      axisLabel: {
+        color: C.inkFaint, fontFamily: FONT_SANS, fontSize: 10,
+        fontWeight: 600, formatter: (v) => fmtNum(v),
+      },
+    },
+    series,
+  };
+}
+
+function renderChart(r) {
+  const el = $("chart");
+  if (!chartInst) chartInst = echarts.init(el, null, { renderer: "canvas" });
+  chartInst.setOption(chartOption(r), true);
+  chartInst.resize();
+  $("chart-explain").textContent = t("chart.explain");
+  $("chart-interact").textContent = t("chart.interact");
+}
+
+/** Save the current chart as a raster or vector file. */
+function exportChart(kind) {
+  if (!chartInst || !S.lastResult) return;
+  const name = `meridian_${(S.lastResult.target || "series").replace(/\W+/g, "_")}`;
+  if (kind === "png") {
+    triggerDownload(
+      chartInst.getDataURL({ type: "png", pixelRatio: 2, backgroundColor: "#FBF9F4" }),
+      name + ".png");
+    return;
+  }
+  // SVG: render the same option through an off-screen SVG instance, so the
+  // export is true vector rather than a rasterised canvas.
+  const holder = document.createElement("div");
+  holder.style.cssText = "position:absolute;left:-99999px;top:0;width:1200px;height:460px";
+  document.body.appendChild(holder);
+  try {
+    const tmp = echarts.init(holder, null, { renderer: "svg", width: 1200, height: 460 });
+    const opt = chartOption(S.lastResult);
+    opt.toolbox = { show: false };
+    opt.backgroundColor = "#FBF9F4";
+    tmp.setOption(opt, true);
+    const svg = tmp.renderToSVGString();
+    tmp.dispose();
+    triggerDownload("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg), name + ".svg");
+  } finally {
+    holder.remove();
   }
 }
 
-// Snap an axis to round figures (1 / 2 / 2.5 / 5 × 10^n), as a printed report would.
-function niceScale(lo, hi, ticks) {
-  const range = hi - lo || 1;
-  const raw = range / ticks;
-  const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(raw)) || 0));
-  const norm = raw / mag;
-  let step;
-  if (norm <= 1) step = 1;
-  else if (norm <= 2) step = 2;
-  else if (norm <= 2.5) step = 2.5;
-  else if (norm <= 5) step = 5;
-  else step = 10;
-  step *= mag;
-  return { lo: Math.floor(lo / step) * step, hi: Math.ceil(hi / step) * step, step };
+function triggerDownload(href, filename) {
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = filename;
+  a.click();
 }
 
 function buildXLabels(r, total) {
@@ -610,18 +695,6 @@ function shortDate(iso) {
   return d.toISOString().slice(0, 10);
 }
 
-function drawLine(ctx, pts, color, width, dash) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.lineJoin = "round";
-  ctx.lineCap = dash ? "butt" : "round";
-  ctx.setLineDash(dash || []);
-  ctx.beginPath();
-  pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
 function fmtNum(v) {
   const a = Math.abs(v);
   if (a >= 1e6) return (v / 1e6).toFixed(1) + "M";
@@ -629,6 +702,24 @@ function fmtNum(v) {
   if (a >= 100) return v.toFixed(0);
   if (a >= 1) return v.toFixed(1);
   return v.toFixed(2);
+}
+
+/** Decimals to show, decided once per series so a tooltip never mixes
+ *  "1052" with "857,99" — which reads as a data error, not a rounding rule. */
+let tipDigits = 2;
+function setTipDigits(r) {
+  let max = 0;
+  for (const v of r.history) if (Math.abs(v) > max) max = Math.abs(v);
+  for (const v of r.point) if (Math.abs(v) > max) max = Math.abs(v);
+  tipDigits = max >= 1000 ? 0 : max >= 10 ? 2 : 4;
+}
+
+/** Tooltips show the figure in full, not an axis abbreviation. */
+function fmtTooltip(v) {
+  if (v === null || v === undefined) return "—";
+  return Number(v).toLocaleString(getLang(), {
+    minimumFractionDigits: tipDigits, maximumFractionDigits: tipDigits,
+  });
 }
 
 // ---------------------------------------------------------------- download
@@ -659,6 +750,8 @@ function wireEvents() {
   $("horizon").addEventListener("input", setHorizonLabel);
   $("run-btn").addEventListener("click", run);
   $("download-btn").addEventListener("click", downloadCSV);
+  $("png-btn").addEventListener("click", () => exportChart("png"));
+  $("svg-btn").addEventListener("click", () => exportChart("svg"));
   $("target-col").addEventListener("change", (e) => {
     $("nonneg").checked = !isSignedSeries(e.target.value);
   });
@@ -691,7 +784,7 @@ function wireEvents() {
   let rt;
   window.addEventListener("resize", () => {
     clearTimeout(rt);
-    rt = setTimeout(() => { if (S.lastResult) drawChart($("chart"), S.lastResult); }, 120);
+    rt = setTimeout(() => { if (chartInst) chartInst.resize(); }, 120);
   });
 }
 

@@ -94,6 +94,14 @@ const I18N = {
     "lg.actual": "Real, retenido",
     "chart.origin": "ORIGEN",
     "chart.present": "PRESENTE",
+    "chart.explain":
+      "La banda interior recoge el 60% de los desenlaces probables; la exterior, el 80%. Ambas se ensanchan con la distancia: cuanto más lejos el período, menos certeza sobre la cifra.",
+    "chart.interact":
+      "Pase el cursor para leer cada período · arrastre sobre el gráfico para ampliar, o use los controles de la esquina superior · descargue el gráfico con los botones inferiores.",
+    "chart.zoomIn": "Ampliar",
+    "chart.zoomReset": "Restablecer la vista",
+    "chart.savePng": "Descargar PNG",
+    "chart.saveSvg": "Descargar SVG",
 
     // Tarifas. Las viñetas de cada plan van en una sola clave, separadas por "|".
     "pricing.title": "Tarifas",
@@ -283,6 +291,14 @@ const I18N = {
     "lg.actual": "Actual, withheld",
     "chart.origin": "ORIGIN",
     "chart.present": "PRESENT",
+    "chart.explain":
+      "The inner band holds 60% of likely outcomes; the outer one, 80%. Both widen with distance: the further the period, the less certain the figure.",
+    "chart.interact":
+      "Hover to read any period · drag across the chart to zoom, or use the controls in the top corner · download the chart with the buttons below.",
+    "chart.zoomIn": "Zoom",
+    "chart.zoomReset": "Reset the view",
+    "chart.savePng": "Download PNG",
+    "chart.saveSvg": "Download SVG",
 
     // Pricing. Each plan's bullets live in one key, separated by "|".
     "pricing.title": "Terms",
