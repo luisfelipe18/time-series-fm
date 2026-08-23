@@ -48,6 +48,7 @@ const I18N = {
     "status.numeric": "Series numéricas",
     "status.rowsTrimmed": "Recortado a los {kept} períodos más recientes de {total}",
     "status.colsTrimmed": "Reducido a las primeras {cols} columnas",
+    "status.reordered": "Archivo en orden inverso: reordenado del m\u00e1s antiguo al m\u00e1s reciente",
     "status.reading": "Leyendo y validando el archivo…",
 
     "p2.title": "Especifique la proyección",
@@ -236,6 +237,7 @@ const I18N = {
     "status.numeric": "Numeric series",
     "status.rowsTrimmed": "Trimmed to the most recent {kept} of {total}",
     "status.colsTrimmed": "Reduced to the first {cols} columns",
+    "status.reordered": "File was newest-first: reordered from oldest to most recent",
     "status.reading": "Reading and validating the file…",
 
     "p2.title": "Specify the projection",

@@ -128,6 +128,37 @@ def _decode_csv(raw: bytes) -> str:
     return raw.decode("latin-1")  # maps every byte; cannot raise
 
 
+def _classify_column(col: pd.Series) -> tuple[str, pd.Series | None]:
+    """Return ("numeric"|"date"|"text", parsed values or None)."""
+    numeric = pd.to_numeric(col, errors="coerce")
+    if int(numeric.notna().sum()) >= max(3, int(0.5 * len(col))):
+        return "numeric", numeric
+    if _is_date_like(col):
+        return "date", pd.to_datetime(col, errors="coerce")
+    return "text", None
+
+
+def _sort_chronologically(df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
+    """Put the rows in forward time order, keyed on the first date column.
+
+    Financial exports (Investing.com, Yahoo Finance, most broker downloads)
+    are newest-first. Fed in that order the engine reads the past as the
+    future: it projects backwards, and the row cap below would keep the
+    OLDEST rows instead of the most recent ones. Sorting here fixes both.
+
+    Returns the dataframe and whether the original order had to be changed.
+    """
+    for name in df.columns:
+        kind, parsed = _classify_column(df[name])
+        if kind != "date" or parsed is None:
+            continue
+        if parsed.isna().all() or parsed.is_monotonic_increasing:
+            return df, False
+        order = parsed.sort_values(kind="stable").index
+        return df.loc[order].reset_index(drop=True), True
+    return df, False
+
+
 @app.post("/api/inspect")
 async def inspect(file: UploadFile = File(...)) -> dict:
     raw = await file.read(settings.MAX_FILE_SIZE_BYTES + 1)
@@ -150,6 +181,10 @@ async def inspect(file: UploadFile = File(...)) -> dict:
     if col_truncated:
         df = df.iloc[:, : settings.MAX_COLUMNS]
 
+    # Order first: the row cap below keeps the tail, which is only "the most
+    # recent" once the rows actually run forwards in time.
+    df, reordered = _sort_chronologically(df)
+
     total_rows = int(df.shape[0])
     row_truncated = total_rows > settings.MAX_ROWS
     if row_truncated:
@@ -159,14 +194,15 @@ async def inspect(file: UploadFile = File(...)) -> dict:
     numeric_data, date_data = {}, {}
     for name in df.columns:
         col = df[name]
-        numeric = pd.to_numeric(col, errors="coerce")
+        kind, parsed = _classify_column(col)
+        is_numeric = kind == "numeric"
+        is_date = kind == "date"
+        numeric = parsed if is_numeric else pd.to_numeric(col, errors="coerce")
         n_numeric = int(numeric.notna().sum())
-        is_numeric = n_numeric >= max(3, int(0.5 * len(col)))
-        is_date = (not is_numeric) and _is_date_like(col)
         columns.append(
             {
                 "name": str(name),
-                "kind": "numeric" if is_numeric else ("date" if is_date else "text"),
+                "kind": kind,
                 "n_valid": n_numeric if is_numeric else int(col.notna().sum()),
             }
         )
@@ -193,6 +229,7 @@ async def inspect(file: UploadFile = File(...)) -> dict:
         "original_rows": total_rows,
         "row_truncated": row_truncated,
         "col_truncated": col_truncated,
+        "reordered": reordered,
         "columns": columns,
         "numeric_columns": numeric_columns,
         "date_candidates": date_candidates,
@@ -212,6 +249,19 @@ class ForecastRequest(BaseModel):
     target_name: str | None = None
 
 
+def _is_reverse_chronological(dates: list[str] | None) -> bool:
+    """True when the supplied dates run newest-first."""
+    if not dates:
+        return False
+    try:
+        idx = pd.to_datetime(pd.Series(dates), errors="coerce").dropna()
+        if len(idx) < 3:
+            return False
+        return bool(idx.is_monotonic_decreasing and not idx.is_monotonic_increasing)
+    except Exception:
+        return False
+
+
 def _infer_future_dates(dates: list[str] | None, n_context: int, horizon: int):
     if not dates:
         return None
@@ -219,14 +269,21 @@ def _infer_future_dates(dates: list[str] | None, n_context: int, horizon: int):
         idx = pd.to_datetime(pd.Series(dates), errors="coerce").dropna()
         if len(idx) < 3:
             return None
+        # Sort defensively: on a newest-first index infer_freq yields a negative
+        # frequency ("-1D") and the projection would march into the past.
+        idx = idx.sort_values().reset_index(drop=True)
         freq = pd.infer_freq(idx)
         if not freq:
             # fall back to the median spacing
             deltas = idx.diff().dropna()
             step = deltas.median()
+            if pd.isna(step) or step <= pd.Timedelta(0):
+                return None
             last = idx.iloc[-1]
             return [(last + step * (h + 1)).isoformat() for h in range(horizon)]
         future = pd.date_range(idx.iloc[-1], periods=horizon + 1, freq=freq)[1:]
+        if len(future) and future[0] <= idx.iloc[-1]:
+            return None  # never hand back dates that precede the series
         return [d.isoformat() for d in future]
     except Exception:
         return None
@@ -256,7 +313,16 @@ def forecast(req: ForecastRequest, request: Request, response: Response) -> dict
                         f"Too many points. Demo max is {settings.MAX_ROWS} per series.",
                         max=settings.MAX_ROWS)
 
-    series = clean_series(req.values)
+    # ---- orientation ------------------------------------------------------
+    # A caller may post a newest-first series (financial exports are). Reading
+    # it in that order makes the engine treat the past as the future, so put
+    # it back in forward order before anything else touches it.
+    values, dates = req.values, req.dates
+    if _is_reverse_chronological(dates):
+        values = list(reversed(values))
+        dates = list(reversed(dates))
+
+    series = clean_series(values)
     if len(series) < settings.MIN_POINTS:
         raise api_error(400, "TOO_FEW_POINTS",
                         f"Need at least {settings.MIN_POINTS} valid points "
@@ -285,15 +351,15 @@ def forecast(req: ForecastRequest, request: Request, response: Response) -> dict
         metrics = None
         history = series
         actual_out = None
-        future_dates = _infer_future_dates(req.dates, len(series), req.horizon)
+        future_dates = _infer_future_dates(dates, len(series), req.horizon)
 
     # Trim history sent to the client for a readable chart / small payload.
     max_hist = min(len(history), max(4 * req.horizon, 200))
     hist_tail = history[-max_hist:]
 
     hist_dates = None
-    if req.dates and req.mode == "future":
-        clean_dates = [d for d in req.dates if d]
+    if dates and req.mode == "future":
+        clean_dates = [d for d in dates if d]
         if len(clean_dates) >= len(history):
             hist_dates = clean_dates[len(history) - max_hist: len(history)]
 

@@ -303,6 +303,9 @@ function renderDataStatus() {
   if (b.col_truncated) {
     bits.push(`<span class="flag">${t("status.colsTrimmed", { cols: S.cfg.max_columns })}</span>`);
   }
+  if (b.reordered) {
+    bits.push(`<span class="flag">${t("status.reordered")}</span>`);
+  }
 
   const cols = b.columns.map((c) => c.name);
   let table = '<div class="preview-wrap"><table class="preview-table"><thead><tr>';
