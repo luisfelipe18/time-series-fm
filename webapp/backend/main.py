@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 SAMPLES_DIR = FRONTEND_DIR / "samples"
 
+# Files the page cannot work without. Checked at startup because a missing one
+# only shows up as a silently broken page otherwise — and the usual cause is a
+# working copy that never received them (a downloaded ZIP rather than a clone,
+# or a pull that did not complete).
+REQUIRED_ASSETS = [
+    FRONTEND_DIR / "index.html",
+    FRONTEND_DIR / "app.js",
+    FRONTEND_DIR / "i18n.js",
+    FRONTEND_DIR / "style.css",
+    FRONTEND_DIR / "vendor" / "echarts.min.js",
+]
+
+
+def check_assets() -> list[Path]:
+    """Report missing front-end files on the console at startup."""
+    missing = [p for p in REQUIRED_ASSETS if not p.is_file()]
+    if missing:
+        print("\n" + "=" * 68, file=sys.stderr)
+        print("  MISSING FRONT-END FILES — the page will not work correctly:", file=sys.stderr)
+        for p in missing:
+            print(f"    - {p}", file=sys.stderr)
+        print("\n  Your working copy is incomplete. Fetch the files with:", file=sys.stderr)
+        print("    git pull", file=sys.stderr)
+        print("  If this folder is an extracted ZIP rather than a clone, git", file=sys.stderr)
+        print("  cannot update it — clone the repository instead.", file=sys.stderr)
+        print("=" * 68 + "\n", file=sys.stderr)
+    else:
+        print(f"--> Front-end assets present ({len(REQUIRED_ASSETS)} files)", file=sys.stderr)
+    return missing
+
 app = FastAPI(title="Meridian Forecasting API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -39,6 +70,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+check_assets()
 
 forecaster = Forecaster()
 limiter = RateLimiter(settings.RATE_LIMIT_FORECASTS, settings.RATE_LIMIT_WINDOW_SEC)
