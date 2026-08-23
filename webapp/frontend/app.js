@@ -634,6 +634,14 @@ function chartOption(r) {
 
 function renderChart(r) {
   const el = $("chart");
+  // Fail in the open: a missing library used to leave an empty box with no
+  // explanation, which reads as a broken product rather than a stale cache.
+  if (typeof echarts === "undefined") {
+    el.innerHTML = `<p class="chart-missing">${t("chart.libMissing")}</p>`;
+    $("chart-explain").textContent = "";
+    $("chart-interact").textContent = "";
+    return;
+  }
   if (!chartInst) chartInst = echarts.init(el, null, { renderer: "canvas" });
   chartInst.setOption(chartOption(r), true);
   chartInst.resize();

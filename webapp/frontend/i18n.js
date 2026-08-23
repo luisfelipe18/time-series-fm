@@ -92,6 +92,8 @@ const I18N = {
     "lg.i60": "Intervalo 60%",
     "lg.i80": "Intervalo 80%",
     "lg.actual": "Real, retenido",
+    "chart.libMissing":
+      "No se pudo cargar el componente del gr\u00e1fico. Recargue la p\u00e1gina forzando la actualizaci\u00f3n (Ctrl+F5). Si persiste, verifique que /vendor/echarts.min.js sea accesible.",
     "chart.origin": "ORIGEN",
     "chart.present": "PRESENTE",
     "chart.explain":
@@ -289,6 +291,8 @@ const I18N = {
     "lg.i60": "60% interval",
     "lg.i80": "80% interval",
     "lg.actual": "Actual, withheld",
+    "chart.libMissing":
+      "The charting component could not be loaded. Reload the page with a forced refresh (Ctrl+F5). If it persists, check that /vendor/echarts.min.js is reachable.",
     "chart.origin": "ORIGIN",
     "chart.present": "PRESENT",
     "chart.explain":

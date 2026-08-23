@@ -1,6 +1,9 @@
 @echo off
 setlocal
 
+rem Name the console window so it is identifiable in the taskbar.
+title The Meridian
+
 rem ===================================================================
 rem  Meridian - start the forecasting demonstration on Windows.
 rem

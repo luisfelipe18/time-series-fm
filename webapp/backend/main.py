@@ -400,8 +400,29 @@ async def http_exc_handler(request: Request, exc: HTTPException):
 
 
 # ----------------------------------------------------------- static frontend
+class RevalidatingStatic(StaticFiles):
+    """Serve the frontend with an explicit revalidation policy.
+
+    With no Cache-Control header a browser falls back to heuristic caching and
+    may keep serving a stale index.html after an update — which is how a page
+    ends up running a new app.js against an old HTML that never requested the
+    chart library, leaving the chart silently blank.
+
+    "no-cache" does not disable caching; it requires the browser to revalidate.
+    The ETag makes that cheap: an unchanged file comes back as a 304 with no
+    body, so the 1 MB chart library is not re-sent on every visit.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
+
 # Mounted AFTER the API routes so /api/* and /samples/* take precedence.
 if SAMPLES_DIR.exists():
-    app.mount("/samples", StaticFiles(directory=str(SAMPLES_DIR)), name="samples")
+    app.mount("/samples", RevalidatingStatic(directory=str(SAMPLES_DIR)), name="samples")
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    app.mount(
+        "/", RevalidatingStatic(directory=str(FRONTEND_DIR), html=True), name="frontend"
+    )
