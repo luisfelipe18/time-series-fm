@@ -567,10 +567,10 @@ function chartOption(r) {
         if (!shown.length) return "";
         const head = `<div style="font-family:${FONT_SANS};font-size:10px;letter-spacing:.12em;
                      text-transform:uppercase;color:${C.inkFaint};margin-bottom:6px">
-                     ${shown[0].axisValueLabel}</div>`;
+                     ${escapeHtml(shown[0].axisValueLabel)}</div>`;
         const rows = shown.map((p) =>
           `<div style="display:flex;gap:14px;justify-content:space-between">
-             <span>${p.marker} ${p.seriesName}</span>
+             <span>${p.marker} ${escapeHtml(p.seriesName)}</span>
              <b style="font-variant-numeric:tabular-nums">${fmtTooltip(p.value)}</b>
            </div>`).join("");
         // Interval bounds for the projected periods, read straight off the result.

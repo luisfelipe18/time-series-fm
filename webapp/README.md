@@ -85,10 +85,13 @@ redistribute the code itself, keep those notices intact.
 Verify the public surface stays clean after any change:
 
 ```bash
-for p in / /app.js /i18n.js /style.css /api/health /api/config /api/samples /openapi.json; do
+for p in / /app.js /i18n.js /style.css /api/health /api/config /api/samples; do
   echo "$p -> $(curl -s "http://localhost:7070$p" | grep -ci 'timesfm\|google') hit(s)"
 done
 ```
+
+`/docs`, `/redoc` and `/openapi.json` are off by default (see *Security*); if you
+turn them on with `DEMO_EXPOSE_DOCS=1`, add `/openapi.json` to the loop.
 
 ## Languages
 
@@ -143,6 +146,7 @@ All limits live in `backend/config.py`, each overridable by environment variable
 | Min points to forecast | 32 | `DEMO_MIN_POINTS` |
 | Max horizon | 128 | `DEMO_MAX_HORIZON` |
 | Computations per IP / window | 40 / 60 min | `DEMO_RATE_FORECASTS`, `DEMO_RATE_WINDOW` |
+| Data loads per IP / window | 60 / 60 min | `DEMO_RATE_INSPECTS` (same window) |
 | Brand / established | Meridian · MMXXVI | `DEMO_BRAND`, `DEMO_ESTABLISHED` |
 | Wordmark suffix | follows the language | `DEMO_BRAND_SUFFIX` (set to pin one wording) |
 | Contact address | sales@vilcongroup.com | `DEMO_CONTACT_EMAIL` |
@@ -154,6 +158,55 @@ Over-limit files are **trimmed** (most recent rows, first columns) and the UI
 says so. Bad requests return `400`, oversized uploads `413`, throttled clients
 `429` with `Retry-After`.
 
+## Security
+
+The page is public, so it gets the same automated scanning as every host on
+the internet: requests for `/.env`, `/wp-login.php`, `/mcp`, `/sse`,
+`/api/settings` and the like. A `404` for those is correct — there is nothing
+there. What matters is that nothing a scanner sends can crash the process,
+exhaust it, or learn more than a visitor would. Request hardening lives in
+`backend/security.py`; the settings in `backend/config.py`.
+
+| Protection | Default | Env var |
+| ---------- | ------- | ------- |
+| Request body cap, enforced while it streams in | file limit + 64 KB | `DEMO_MAX_BODY_BYTES` |
+| Scanner ban (on/off) | on | `DEMO_PROBE_BAN` |
+| Ban threshold / window | score 20 in 10 min | `DEMO_PROBE_BAN_THRESHOLD`, `DEMO_PROBE_BAN_WINDOW` |
+| Ban length | 60 min | `DEMO_PROBE_BAN_SECONDS` |
+| API docs and OpenAPI schema | off | `DEMO_EXPOSE_DOCS` |
+| Cross-origin access (CORS) | none | `DEMO_CORS_ORIGINS` (comma-separated) |
+
+- **Client address.** Rate limits and bans key on the address uvicorn resolved.
+  uvicorn applies `X-Forwarded-For` only when the connection comes from a
+  trusted proxy (`--forwarded-allow-ips`, 127.0.0.1 by default), taking the
+  right-most untrusted entry — the one the proxy itself appended. The header is
+  never read directly: that let any caller pick a new address per request and
+  never hit a limit.
+- **Scanner ban.** Requests for well-known exploit paths score 5 and are
+  answered `404` without touching the filesystem; any other `404` scores 1.
+  An address reaching the threshold gets `403` on every path for the ban
+  length, logged as `[guard] banned …`. Favicons, `robots.txt`, `sitemap.xml`
+  and `/.well-known/` are never scored. Loopback is exempt. Bans are in
+  memory and clear on restart. It is a speed bump for a single address, not a
+  firewall: block at the edge for anything more.
+- **Upload size.** A declared `Content-Length` over the cap is refused before
+  a byte is read; a chunked body is cut off at the cap. Previously the full body
+  was spooled to disk before the 2 MB check ran.
+- **Headers.** Every response carries a Content-Security-Policy (scripts only
+  from this origin, no inline or eval'd script, no framing), `nosniff`,
+  `X-Frame-Options: DENY`, a referrer policy and a permissions policy.
+  `run.sh` / `run.bat` start uvicorn with `--no-server-header`.
+- **Errors.** Parser and framework internals are not echoed back; a CSV that
+  will not parse gets a generic `CSV_PARSE`.
+- **Windows paths.** A request whose path the OS rejects (`:` `<` `>` `|` `?`
+  `*` `"` — WinError 123) is a `404`, not an unhandled `500`.
+
+Behind a tunnel or reverse proxy on the same machine (Cloudflare Tunnel, IIS,
+nginx, Caddy), also **close the app port to the outside** in the host
+firewall, so the proxy is the only way in. Otherwise scanners reach uvicorn
+directly and skip whatever the proxy filters. If the proxy is on another
+machine, add its address to `--forwarded-allow-ips`.
+
 ## API
 
 | Method | Path | Purpose |
@@ -161,10 +214,11 @@ says so. Bad requests return `400`, oversized uploads `413`, throttled clients
 | `GET`  | `/api/health` | liveness + active engine |
 | `GET`  | `/api/config` | demo limits and branding (the frontend reads these) |
 | `GET`  | `/api/samples` | prepared datasets |
-| `POST` | `/api/inspect` | validate + parse an uploaded CSV (multipart) |
+| `POST` | `/api/inspect` | validate + parse an uploaded CSV (multipart, rate limited) |
 | `POST` | `/api/forecast` | projection or validation run (rate limited) |
 
-`GET /` serves the frontend; `/samples/*` serves the prepared CSVs.
+`GET /` serves the frontend; `/samples/*` serves the prepared CSVs;
+`/robots.txt` keeps indexers off `/api/` and `/samples/`.
 
 ### `POST /api/forecast`
 
@@ -198,12 +252,15 @@ webapp/
 │   ├── main.py         FastAPI app, routes, static mount
 │   ├── config.py       demo limits and branding
 │   ├── forecaster.py   model wrapper, baseline engine, metrics
-│   └── limiter.py      in-memory sliding-window rate limiter
+│   ├── limiter.py      in-memory sliding-window rate limiter
+│   └── security.py     body cap, scanner ban, security headers
 ├── frontend/
 │   ├── index.html
 │   ├── style.css       house style
 │   ├── i18n.js         Spanish/English copy and the t() helper
-│   ├── app.js          CSV handling, API calls, canvas chart
+│   ├── app.js          CSV handling, API calls, interactive chart
+│   ├── favicon.ico / favicon.svg / apple-touch-icon.png
+│   ├── vendor/         chart library (Apache-2.0), served locally
 │   └── samples/        prepared CSVs + manifest.json
 ├── pyproject.toml      uv project (model backend is the optional `full` extra)
 ├── run.sh              uv venv + uv sync + uvicorn on :7070 (Linux/macOS)
@@ -213,7 +270,9 @@ webapp/
 ## Production notes
 
 - Replace the in-memory limiter with Redis behind multiple workers.
-- Put it behind a reverse proxy; the app honours `X-Forwarded-For`.
+- Put it behind a reverse proxy that terminates HTTPS, and close the app port
+  to everything but the proxy (see *Security* for how client addresses are
+  resolved).
 - Pre-warm the engine at startup if the first request must be fast.
 - Review the model-weight licence before commercial deployment; the code licence
   and the weight licence are separate instruments.

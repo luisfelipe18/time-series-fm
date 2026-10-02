@@ -32,6 +32,29 @@ class Settings:
     # ---- Rate limiting (per client IP, sliding window) --------------------
     RATE_LIMIT_FORECASTS: int = _int("DEMO_RATE_FORECASTS", 40)
     RATE_LIMIT_WINDOW_SEC: int = _int("DEMO_RATE_WINDOW", 3600)
+    # Every dataset load — upload or prepared sample — is one inspection, and
+    # each is a full CSV parse, so it gets its own, more generous, bucket.
+    RATE_LIMIT_INSPECTS: int = _int("DEMO_RATE_INSPECTS", 60)
+
+    # ---- Hardening ---------------------------------------------------------
+    # Largest request body accepted, enforced while the body streams in, so an
+    # oversized upload is refused before it is written anywhere. The margin
+    # over the file limit covers multipart framing.
+    MAX_BODY_BYTES: int = _int("DEMO_MAX_BODY_BYTES", MAX_FILE_SIZE_BYTES + 64 * 1024)
+    # The page and its API share one origin, so no cross-origin access is
+    # needed. List origins here (comma-separated) only if the frontend is ever
+    # hosted elsewhere.
+    CORS_ORIGINS: list[str] = [
+        o.strip() for o in os.getenv("DEMO_CORS_ORIGINS", "").split(",") if o.strip()
+    ]
+    # /docs, /redoc and /openapi.json hand a scanner a complete map of the API.
+    EXPOSE_DOCS: bool = _bool("DEMO_EXPOSE_DOCS", False)
+    # Scanner ban: probes for well-known exploit paths score 5, any other 404
+    # scores 1. Reaching the threshold inside the window bans the address.
+    PROBE_BAN_ENABLED: bool = _bool("DEMO_PROBE_BAN", True)
+    PROBE_BAN_THRESHOLD: int = _int("DEMO_PROBE_BAN_THRESHOLD", 20)
+    PROBE_BAN_WINDOW_SEC: int = _int("DEMO_PROBE_BAN_WINDOW", 600)
+    PROBE_BAN_SEC: int = _int("DEMO_PROBE_BAN_SECONDS", 3600)
 
     # ---- Model ------------------------------------------------------------
     MODEL_MAX_CONTEXT: int = _int("DEMO_MODEL_CONTEXT", 1024)

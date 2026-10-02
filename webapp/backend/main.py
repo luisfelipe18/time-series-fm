@@ -4,10 +4,11 @@ Endpoints
     GET  /api/health          liveness + which engine is active
     GET  /api/config          demo limits (frontend reads these)
     GET  /api/samples         list of bundled sample datasets
-    POST /api/inspect         validate + parse an uploaded CSV (enforces limits)
+    POST /api/inspect         validate + parse an uploaded CSV (rate limited)
     POST /api/forecast        run a forecast or a backtest (rate limited)
 
-The frontend (vanilla HTML/CSS/JS) is served from ``/``.
+The frontend (vanilla HTML/CSS/JS) is served from ``/``. Request hardening
+(body limit, scanner ban, security headers) lives in ``security.py``.
 """
 
 from __future__ import annotations
@@ -21,13 +22,15 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
 from .forecaster import Forecaster, clean_series, compute_metrics
 from .limiter import RateLimiter
+from .security import BodySizeLimit, ProbeGuard, SecurityHeaders
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
@@ -63,25 +66,64 @@ def check_assets() -> list[Path]:
         print(f"--> Front-end assets present ({len(REQUIRED_ASSETS)} files)", file=sys.stderr)
     return missing
 
-app = FastAPI(title="Meridian Forecasting API", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+# The interactive docs and the OpenAPI schema are off unless asked for: on a
+# public host they hand every scanner a complete map of the API.
+_docs = settings.EXPOSE_DOCS
+app = FastAPI(
+    title="Meridian Forecasting API", version="1.0.0",
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
 )
+
+# Page and API share one origin, so cross-origin access is closed by default.
+if settings.CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
+# Added last = runs first: headers wrap everything, then the scanner ban, then
+# the body limit right in front of the routes.
+app.add_middleware(BodySizeLimit, max_bytes=settings.MAX_BODY_BYTES)
+app.add_middleware(
+    ProbeGuard,
+    enabled=settings.PROBE_BAN_ENABLED,
+    threshold=settings.PROBE_BAN_THRESHOLD,
+    window=settings.PROBE_BAN_WINDOW_SEC,
+    ban_seconds=settings.PROBE_BAN_SEC,
+)
+app.add_middleware(SecurityHeaders)
 
 check_assets()
 
 forecaster = Forecaster()
 limiter = RateLimiter(settings.RATE_LIMIT_FORECASTS, settings.RATE_LIMIT_WINDOW_SEC)
+inspect_limiter = RateLimiter(settings.RATE_LIMIT_INSPECTS, settings.RATE_LIMIT_WINDOW_SEC)
 
 
 def client_ip(request: Request) -> str:
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",")[0].strip()
+    """The caller's address as uvicorn resolved it.
+
+    X-Forwarded-For is deliberately not read here. uvicorn already applies it
+    when — and only when — the connection comes from a trusted proxy
+    (``--forwarded-allow-ips``, 127.0.0.1 by default). Reading the header
+    directly let any caller send a different made-up address per request and
+    never hit the rate limit.
+    """
     return request.client.host if request.client else "unknown"
+
+
+def _rate_limited(code: str, limit: int, retry_after: int):
+    minutes = settings.RATE_LIMIT_WINDOW_SEC // 60
+    return api_error(
+        429, code,
+        f"Demo rate limit reached ({limit} per {minutes} min). "
+        f"Try again in {retry_after}s.",
+        headers={"Retry-After": str(retry_after)},
+        limit=limit, minutes=minutes, retry=retry_after,
+    )
 
 
 def api_error(status: int, code: str, message: str, headers=None, **params):
@@ -106,6 +148,24 @@ def health() -> dict:
 @app.get("/api/config")
 def get_config() -> dict:
     return settings.public_dict()
+
+
+# --------------------------------------------------------- crawler courtesies
+# Browsers and search engines ask for these on their own. Answering them keeps
+# them out of the 404 count, and robots.txt keeps indexers off the API.
+_ROBOTS = "User-agent: *\nDisallow: /api/\nDisallow: /samples/\n"
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots() -> PlainTextResponse:
+    return PlainTextResponse(_ROBOTS, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+def touch_icon_alias() -> FileResponse:
+    # Older iOS asks for this name first; it is the same image.
+    return FileResponse(FRONTEND_DIR / "apple-touch-icon.png",
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 
 # -------------------------------------------------------------------- samples
@@ -193,7 +253,13 @@ def _sort_chronologically(df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
 
 
 @app.post("/api/inspect")
-async def inspect(file: UploadFile = File(...)) -> dict:
+async def inspect(request: Request, file: UploadFile = File(...)) -> dict:
+    # Each inspection is a full CSV parse, so it is throttled like a forecast,
+    # with a more generous bucket: browsing the samples costs one each.
+    allowed, retry_after, _ = inspect_limiter.check(client_ip(request))
+    if not allowed:
+        raise _rate_limited("UPLOADS_RATE_LIMITED", settings.RATE_LIMIT_INSPECTS, retry_after)
+
     raw = await file.read(settings.MAX_FILE_SIZE_BYTES + 1)
     if len(raw) > settings.MAX_FILE_SIZE_BYTES:
         mb = settings.MAX_FILE_SIZE_BYTES // (1024 * 1024)
@@ -204,8 +270,10 @@ async def inspect(file: UploadFile = File(...)) -> dict:
 
     try:
         df = pd.read_csv(io.StringIO(_decode_csv(raw)))
-    except Exception as exc:
-        raise api_error(400, "CSV_PARSE", f"Could not parse CSV: {exc}")
+    except Exception:
+        # The parser's own message names internals (engine, buffer positions)
+        # and helps nobody but someone fuzzing the endpoint.
+        raise api_error(400, "CSV_PARSE", "Could not parse CSV. Check the format.")
 
     if df.shape[1] == 0 or df.shape[0] == 0:
         raise api_error(400, "CSV_EMPTY", "CSV has no rows/columns.")
@@ -327,14 +395,7 @@ def forecast(req: ForecastRequest, request: Request, response: Response) -> dict
     # ---- rate limit -------------------------------------------------------
     allowed, retry_after, remaining = limiter.check(client_ip(request))
     if not allowed:
-        minutes = settings.RATE_LIMIT_WINDOW_SEC // 60
-        raise api_error(
-            429, "RATE_LIMITED",
-            f"Demo rate limit reached ({settings.RATE_LIMIT_FORECASTS} per "
-            f"{minutes} min). Try again in {retry_after}s.",
-            headers={"Retry-After": str(retry_after)},
-            limit=settings.RATE_LIMIT_FORECASTS, minutes=minutes, retry=retry_after,
-        )
+        raise _rate_limited("RATE_LIMITED", settings.RATE_LIMIT_FORECASTS, retry_after)
 
     # ---- validate volume --------------------------------------------------
     if req.horizon > settings.MAX_HORIZON:
@@ -447,7 +508,15 @@ class RevalidatingStatic(StaticFiles):
     """
 
     async def get_response(self, path, scope):
-        response = await super().get_response(path, scope)
+        try:
+            response = await super().get_response(path, scope)
+        except OSError:
+            # A path the operating system refuses outright. Starlette maps only
+            # "name too long" to a 404 and lets the rest escape as a 500; on
+            # Windows that includes any path containing ':' '<' '>' '"' '|' '?'
+            # '*' (WinError 123), which crawlers send all the time. It is a
+            # file that does not exist, and is answered as one.
+            raise StarletteHTTPException(status_code=404)
         # The HTML document is never stored. It is a few kilobytes, and it is
         # the one file whose staleness breaks everything else: a cached copy
         # from before an asset was added keeps referencing the old set, and the

@@ -6,7 +6,11 @@
   <title>Meridian — Demostración privada</title>
   <meta name="description" content="Meridian es un motor de proyección propietario, desarrollado internamente." />
   <link rel="stylesheet" href="/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23F2EFE7'/><rect x='2.5' y='2.5' width='27' height='27' fill='none' stroke='%238C7238' stroke-width='1'/><text x='16' y='23' font-family='Georgia,serif' font-size='18' fill='%231B1A17' text-anchor='middle'>M</text></svg>" />
+  <!-- Real files, not a data: URI: crawlers resolved the inline icon as a
+       relative path and requested "/data:image/svg+xml,<svg ..." from us. -->
+  <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 </head>
 <body>
 

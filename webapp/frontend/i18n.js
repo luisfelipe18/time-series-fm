@@ -202,6 +202,8 @@ const I18N = {
       "La validación requiere al menos {need} períodos para un horizonte de {horizon}. Acorte el horizonte o use una serie más larga.",
     "srv.RATE_LIMITED":
       "Se alcanzó el límite de la demostración ({limit} cálculos por {minutes} min). Reintente en {retry} s, o escríbanos para obtener acceso.",
+    "srv.UPLOADS_RATE_LIMITED":
+      "Se alcanzó el límite de la demostración ({limit} cargas de datos por {minutes} min). Reintente en {retry} s, o escríbanos para obtener acceso.",
   },
 
   en: {
@@ -398,6 +400,8 @@ const I18N = {
       "Validation requires at least {need} periods for a horizon of {horizon}. Shorten the horizon or use a longer series.",
     "srv.RATE_LIMITED":
       "The demonstration limit was reached ({limit} computations per {minutes} min). Retry in {retry}s, or write to us for access.",
+    "srv.UPLOADS_RATE_LIMITED":
+      "The demonstration limit was reached ({limit} data loads per {minutes} min). Retry in {retry}s, or write to us for access.",
   },
 };
 

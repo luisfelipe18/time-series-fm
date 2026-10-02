@@ -17,6 +17,7 @@ class RateLimiter:
         self.window = window_sec
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._calls = 0
 
     def _prune(self, dq: deque[float], now: float) -> None:
         cutoff = now - self.window
@@ -30,6 +31,9 @@ class RateLimiter:
         """
         now = time.time()
         with self._lock:
+            self._calls += 1
+            if self._calls % 1000 == 0:
+                self._sweep(now)
             dq = self._hits[key]
             self._prune(dq, now)
             if len(dq) >= self.limit:
@@ -38,9 +42,20 @@ class RateLimiter:
             dq.append(now)
             return True, 0, self.limit - len(dq)
 
+    def _sweep(self, now: float) -> None:
+        # Addresses that stopped calling would otherwise stay in memory for
+        # good; a stream of one-off callers grows the table without bound.
+        for key in list(self._hits):
+            dq = self._hits[key]
+            self._prune(dq, now)
+            if not dq:
+                del self._hits[key]
+
     def remaining(self, key: str) -> int:
         now = time.time()
         with self._lock:
-            dq = self._hits[key]
+            dq = self._hits.get(key)
+            if not dq:
+                return self.limit
             self._prune(dq, now)
             return max(0, self.limit - len(dq))

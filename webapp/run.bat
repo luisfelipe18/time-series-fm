@@ -76,6 +76,7 @@ echo   Press Ctrl+C to stop.
 echo ====================================================================
 echo.
 
-uv run uvicorn backend.main:app --host %HOST% --port %PORT%
+rem --no-server-header: do not announce the server software to every caller.
+uv run uvicorn backend.main:app --host %HOST% --port %PORT% --no-server-header
 
 endlocal

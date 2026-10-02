@@ -57,4 +57,5 @@ echo "  Press Ctrl+C to stop."
 echo "===================================================================="
 echo ""
 
-exec uv run uvicorn backend.main:app --host "$HOST" --port "$PORT"
+# --no-server-header: do not announce the server software to every caller.
+exec uv run uvicorn backend.main:app --host "$HOST" --port "$PORT" --no-server-header
